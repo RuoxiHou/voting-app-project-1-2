@@ -1,0 +1,93 @@
+# Ansible retry files
+*.retry
+
+# Ansible vault password files
+.vault_pass
+vault_password_file
+
+# Ansible inventory files containing secrets
+inventory/*/hosts
+inventory/*/group_vars/*vault*
+inventory/*/host_vars/*vault*
+
+# Ansible temporary files
+*.tmp
+*.retry
+.retry
+
+# Ansible facts cache
+.fact_cache/
+fact_cache/
+*.cache
+
+# SSH keys and sensitive files
+*.pem
+*.key
+*.pub
+.ssh/
+
+# Secrets / credentials
+secrets/
+secret/
+credentials/
+*.secret
+*.password
+*.passwd
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Python virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Python cache files (Ansible uses Python)
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Molecule testing artifacts
+.molecule/
+molecule/*/.cache/
+
+# Ansible Galaxy downloaded roles/collections
+roles/*/meta/.galaxy_install_info
+collections/
+
+# Temporary build files
+tmp/
+temp/
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Terraform (if Ansible is used with Terraform)
+.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+crash.*.log
+
+# Local configuration overrides
+local.yml
+local.yaml
+override.yml
+override.yaml
+
+# ssh key
+*.pem
