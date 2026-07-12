@@ -35,6 +35,23 @@ locals {
       public = false
     }
   }
+
+  # Application topology
+  topology = {
+    az1 = {
+      bastion    = "a"
+      frontend   = "a"
+      middleware = "b"
+      postgres   = "b"
+    }
+
+    az2 = {
+      bastion    = "c"
+      frontend   = "c"
+      middleware = "d"
+      postgres   = "d"
+    }
+  }
 }
 
 resource "aws_subnet" "subnets" {
@@ -109,15 +126,15 @@ resource "aws_security_group" "alb" {
   vpc_id      = aws_vpc.main.id
 
   ingress {
-    from_port   = var.alb_http_port
-    to_port     = var.alb_http_port
+    from_port   = var.vote_outside_port
+    to_port     = var.vote_outside_port
     protocol    = var.ingress_protocol
     cidr_blocks = [var.allowed_cidr_ipv4_public]
   }
 
   ingress {
-    from_port   = var.alb_https_port
-    to_port     = var.alb_https_port
+    from_port   = var.result_outside_port
+    to_port     = var.result_outside_port
     protocol    = var.ingress_protocol
     cidr_blocks = [var.allowed_cidr_ipv4_public]
   }
@@ -212,9 +229,9 @@ resource "aws_security_group" "middleware" {
 
   ingress {
     description = "Allow Frontend to access Redis"
-    from_port = var.redis_outside_port
-    to_port   = var.redis_outside_port
-    protocol  = var.ingress_protocol
+    from_port   = var.redis_outside_port
+    to_port     = var.redis_outside_port
+    protocol    = var.ingress_protocol
 
     security_groups = [
       aws_security_group.frontend.id
@@ -222,13 +239,22 @@ resource "aws_security_group" "middleware" {
   }
 
   ingress {
-    description     = "SSH from bastion"
+    description = "SSH from bastion"
     from_port   = var.ssh_port
     to_port     = var.ssh_port
     protocol    = var.ingress_protocol
+
     security_groups = [
       aws_security_group.bastion.id
     ]
+  }
+
+  egress {
+    description = "Allow outbound traffic"
+    from_port   = var.egress_port
+    to_port     = var.egress_port
+    protocol    = var.egress_ip_protocol
+    cidr_blocks = [var.allowed_cidr_ipv4_public]
   }
 
   tags = {
@@ -586,30 +612,79 @@ resource "local_file" "private_key" {
   file_permission = "0400" 
 }
 
-# Generate yml directly for Ansible to use
-resource "local_file" "ansible_inventory" {
-  filename = "${path.root}/ansible/inventory.ini"
-ssh
+# Generate SSH-Config
+resource "local_file" "ssh_config" {
+  filename = "${path.root}/ansible/ssh_config"
+
   content = <<EOF
-[bastion]
-%{ for name, instance in aws_instance.bastion ~}
-${name} ansible_host=${instance.public_ip} ansible_user=ec2-user ansible_ssh_private_key_file=${path.root}/ansible/${var.student_name}-ssh-key.pem
-%{ endfor ~}
+Host *
+    User ec2-user
+    IdentityFile ${abspath(path.root)}/ansible/${var.student_name}-project1-ssh-key.pem
+    IdentitiesOnly yes
+    StrictHostKeyChecking no
+    UserKnownHostsFile /dev/null
 
-[frontend]
-%{ for name, instance in aws_instance.frontend ~}
-${name} ansible_host=${instance.private_ip} ansible_user=ec2-user ansible_ssh_private_key_file=${path.root}/ansible/${var.student_name}-ssh-key.pem
-%{ endfor ~}
+Host bastion-${local.topology.az1.bastion}
+    HostName ${aws_instance.bastion[local.topology.az1.bastion].public_ip}
 
-[middleware]
-%{ for name, instance in aws_instance.middleware ~}
-${name} ansible_host=${instance.private_ip} ansible_user=ec2-user ansible_ssh_private_key_file=${path.root}/ansible/${var.student_name}-ssh-key.pem ansible_ssh_common_args='-o ProxyJump=ec2-user@${aws_instance.bastion["a"].public_ip}'
-%{ endfor ~}
+Host bastion-${local.topology.az2.bastion}
+    HostName ${aws_instance.bastion[local.topology.az2.bastion].public_ip}
 
-[database]
-postgres-primary ansible_host=${aws_instance.postgres_primary.private_ip} ansible_user=ec2-user ansible_ssh_private_key_file=${path.root}/ansible/${var.student_name}-ssh-key.pem ansible_ssh_common_args='-o ProxyJump=ec2-user@${aws_instance.bastion["a"].public_ip}'
-postgres-standby ansible_host=${aws_instance.postgres_replica.private_ip} ansible_user=ec2-user ansible_ssh_private_key_file=${path.root}/ansible/${var.student_name}-ssh-key.pem ansible_ssh_common_args='-o ProxyJump=ec2-user@${aws_instance.bastion["c"].public_ip}'
+Host frontend-${local.topology.az1.frontend}
+    HostName ${aws_instance.frontend[local.topology.az1.frontend].private_ip}
+    ProxyJump bastion-${local.topology.az1.bastion}
+
+Host frontend-${local.topology.az2.frontend}
+    HostName ${aws_instance.frontend[local.topology.az2.frontend].private_ip}
+    ProxyJump bastion-${local.topology.az2.bastion}
+
+Host middleware-${local.topology.az1.middleware}
+    HostName ${aws_instance.middleware[local.topology.az1.middleware].private_ip}
+    ProxyJump bastion-${local.topology.az1.bastion}
+
+Host middleware-${local.topology.az2.middleware}
+    HostName ${aws_instance.middleware[local.topology.az2.middleware].private_ip}
+    ProxyJump bastion-${local.topology.az2.bastion}
+
+Host db-1 postgres-primary
+    HostName ${aws_instance.postgres_primary.private_ip}
+    ProxyJump bastion-${local.topology.az1.bastion}
+
+Host db-2 postgres-standby
+    HostName ${aws_instance.postgres_replica.private_ip}
+    ProxyJump bastion-${local.topology.az2.bastion}
 EOF
 }
 
+resource "local_file" "ansible_inventory" {
+  filename = "${path.root}/ansible/inventory.ini"
 
+  content = <<EOF
+[bastion]
+bastion-${local.topology.az1.bastion} az=az1
+bastion-${local.topology.az2.bastion} az=az2
+
+[frontend]
+frontend-${local.topology.az1.frontend} az=az1 private_ip=${aws_instance.frontend[local.topology.az1.frontend].private_ip} private_dns=${aws_instance.frontend[local.topology.az1.frontend].private_dns} redis_host_ip=${aws_instance.middleware[local.topology.az1.middleware].private_ip} result_db_host_ip=${aws_instance.postgres_primary.private_ip}
+frontend-${local.topology.az2.frontend} az=az2 private_ip=${aws_instance.frontend[local.topology.az2.frontend].private_ip} private_dns=${aws_instance.frontend[local.topology.az2.frontend].private_dns} redis_host_ip=${aws_instance.middleware[local.topology.az2.middleware].private_ip} result_db_host_ip=${aws_instance.postgres_replica.private_ip}
+
+[middleware]
+middleware-${local.topology.az1.middleware} az=az1 private_ip=${aws_instance.middleware[local.topology.az1.middleware].private_ip} private_dns=${aws_instance.middleware[local.topology.az1.middleware].private_dns} postgres_primary_ip=${aws_instance.postgres_primary.private_ip}
+middleware-${local.topology.az2.middleware} az=az2 private_ip=${aws_instance.middleware[local.topology.az2.middleware].private_ip} private_dns=${aws_instance.middleware[local.topology.az2.middleware].private_dns} postgres_primary_ip=${aws_instance.postgres_primary.private_ip}
+
+[postgres_primary]
+db-1 az=az1 private_ip=${aws_instance.postgres_primary.private_ip} private_dns=${aws_instance.postgres_primary.private_dns} postgres_role=primary
+
+[postgres_standby]
+db-2 az=az2 private_ip=${aws_instance.postgres_replica.private_ip} private_dns=${aws_instance.postgres_replica.private_dns} postgres_role=standby postgres_primary_ip=${aws_instance.postgres_primary.private_ip}
+
+[postgres:children]
+postgres_primary
+postgres_standby
+
+[docker_hosts:children]
+frontend
+middleware
+postgres
+EOF
+}

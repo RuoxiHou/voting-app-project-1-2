@@ -1,0 +1,36 @@
+Host *
+    User ec2-user
+    IdentityFile /home/ruoxi_hou/ruoxi_project_1/ironhack-project-1/setup/infrastructure/ansible/ruoxi-project1-ssh-key.pem
+    IdentitiesOnly yes
+    StrictHostKeyChecking no
+    UserKnownHostsFile /dev/null
+
+Host bastion-a
+    HostName 54.213.30.58
+
+Host bastion-c
+    HostName 54.200.164.145
+
+Host frontend-a
+    HostName 10.5.1.212
+    ProxyJump bastion-a
+
+Host frontend-c
+    HostName 10.5.3.7
+    ProxyJump bastion-c
+
+Host middleware-b
+    HostName 10.5.2.209
+    ProxyJump bastion-a
+
+Host middleware-d
+    HostName 10.5.4.175
+    ProxyJump bastion-c
+
+Host db-1 postgres-primary
+    HostName 10.5.2.244
+    ProxyJump bastion-a
+
+Host db-2 postgres-standby
+    HostName 10.5.4.236
+    ProxyJump bastion-c

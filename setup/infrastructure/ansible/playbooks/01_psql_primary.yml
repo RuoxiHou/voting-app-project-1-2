@@ -1,0 +1,76 @@
+---
+- name: Deploy PostgreSQL primary
+  hosts: postgres_primary
+  become: true
+  collections:
+    - community.docker
+
+  tasks:
+    - name: Create PostgreSQL directories
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        mode: "0755"
+      loop:
+        - "{{ postgres_data_dir }}"
+        - "{{ postgres_init_dir }}"
+
+    - name: Create init script for replication user and pg_hba
+      ansible.builtin.copy:
+        dest: "{{ postgres_init_dir }}/01-replication.sh"
+        mode: "0755"
+        content: |
+          #!/bin/bash
+          set -e
+
+          psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-EOSQL
+            DO
+            \$do\$
+            BEGIN
+              IF NOT EXISTS (
+                SELECT FROM pg_catalog.pg_roles
+                WHERE rolname = '{{ postgres_replication_user }}'
+              ) THEN
+                CREATE ROLE {{ postgres_replication_user }} WITH REPLICATION LOGIN PASSWORD '{{ postgres_replication_password }}';
+              END IF;
+            END
+            \$do\$;
+          EOSQL
+
+          echo "host replication {{ postgres_replication_user }} 0.0.0.0/0 md5" >> "$PGDATA/pg_hba.conf"
+          echo "host all all 0.0.0.0/0 md5" >> "$PGDATA/pg_hba.conf"
+
+    - name: Create local Docker network for PostgreSQL
+      community.docker.docker_network:
+        name: "{{ postgres_network }}"
+        state: present
+
+    - name: Run PostgreSQL primary container
+      community.docker.docker_container:
+        name: "{{ postgres_container_name }}"
+        image: "{{ postgres_image }}"
+        state: started
+        restart_policy: "{{ container_restart_policy }}"
+        networks:
+          - name: "{{ postgres_network }}"
+        published_ports:
+          - "{{ postgres_port }}:5432"
+        env:
+          POSTGRES_DB: "{{ postgres_db }}"
+          POSTGRES_USER: "{{ postgres_user }}"
+          POSTGRES_PASSWORD: "{{ postgres_password }}"
+        volumes:
+          - "{{ postgres_data_dir }}:/var/lib/postgresql/data"
+          - "{{ postgres_init_dir }}:/docker-entrypoint-initdb.d"
+        command:
+          - "postgres"
+          - "-c"
+          - "listen_addresses=*"
+          - "-c"
+          - "wal_level=replica"
+          - "-c"
+          - "max_wal_senders=10"
+          - "-c"
+          - "max_replication_slots=10"
+          - "-c"
+          - "hot_standby=on"

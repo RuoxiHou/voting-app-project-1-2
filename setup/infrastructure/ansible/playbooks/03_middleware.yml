@@ -1,0 +1,48 @@
+---
+- name: Deploy Redis and Worker
+  hosts: middleware
+  become: true
+  collections:
+    - community.docker
+
+  tasks:
+    - name: Create middleware Docker network
+      community.docker.docker_network:
+        name: "{{ middleware_network }}"
+        state: present
+
+    - name: Run Redis container
+      community.docker.docker_container:
+        name: "{{ redis_container_name }}"
+        image: "{{ redis_image }}"
+        state: started
+        restart_policy: "{{ container_restart_policy }}"
+        networks:
+          - name: "{{ middleware_network }}"
+            aliases:
+              - redis
+        published_ports:
+          - "{{ redis_port }}:6379"
+        command:
+          - "redis-server"
+          - "--appendonly"
+          - "yes"
+
+    - name: Run Worker container
+      community.docker.docker_container:
+        name: "{{ worker_container_name }}"
+        image: "{{ worker_image }}"
+        state: started
+        restart_policy: "{{ container_restart_policy }}"
+        networks:
+          - name: "{{ middleware_network }}"
+        env:
+          REDIS_HOST: "redis"
+          REDIS_PORT: "{{ redis_port | string }}"
+          POSTGRES_HOST: "{{ postgres_primary_ip }}"
+          POSTGRES_PORT: "{{ postgres_port | string }}"
+          POSTGRES_DB: "{{ postgres_db }}"
+          POSTGRES_USER: "{{ postgres_user }}"
+          POSTGRES_PASSWORD: "{{ postgres_password }}"
+        etc_hosts:
+          db: "{{ postgres_primary_ip }}"

@@ -1,0 +1,47 @@
+---
+- name: Deploy Vote and Result frontends
+  hosts: frontend
+  become: true
+  collections:
+    - community.docker
+
+  tasks:
+    - name: Create frontend Docker network
+      community.docker.docker_network:
+        name: "{{ frontend_network }}"
+        state: present
+
+    - name: Run Vote container
+      community.docker.docker_container:
+        name: "{{ vote_container_name }}"
+        image: "{{ vote_image }}"
+        state: started
+        restart_policy: "{{ container_restart_policy }}"
+        networks:
+          - name: "{{ frontend_network }}"
+        published_ports:
+          - "{{ vote_host_port }}:{{ vote_container_port }}"
+        env:
+          REDIS_HOST: "{{ redis_host_ip }}"
+          REDIS_PORT: "{{ redis_port | string }}"
+        etc_hosts:
+          redis: "{{ redis_host_ip }}"
+
+    - name: Run Result container
+      community.docker.docker_container:
+        name: "{{ result_container_name }}"
+        image: "{{ result_image }}"
+        state: started
+        restart_policy: "{{ container_restart_policy }}"
+        networks:
+          - name: "{{ frontend_network }}"
+        published_ports:
+          - "{{ result_host_port }}:{{ result_container_port }}"
+        env:
+          POSTGRES_HOST: "{{ result_db_host_ip }}"
+          POSTGRES_PORT: "{{ postgres_port | string }}"
+          POSTGRES_DB: "{{ postgres_db }}"
+          POSTGRES_USER: "{{ postgres_user }}"
+          POSTGRES_PASSWORD: "{{ postgres_password }}"
+        etc_hosts:
+          db: "{{ result_db_host_ip }}"

@@ -1,0 +1,75 @@
+---
+- name: Deploy PostgreSQL standby
+  hosts: postgres_standby
+  become: true
+  collections:
+    - community.docker
+
+  tasks:
+    - name: Stop and remove broken standby container if it exists
+      community.docker.docker_container:
+        name: "{{ postgres_container_name }}"
+        state: absent
+        force_kill: true
+
+    - name: Recreate standby data directory
+      ansible.builtin.file:
+        path: "{{ postgres_data_dir }}"
+        state: absent
+
+    - name: Create clean standby data directory
+      ansible.builtin.file:
+        path: "{{ postgres_data_dir }}"
+        state: directory
+        owner: "999"
+        group: "999"
+        mode: "0700"
+
+    - name: Create local Docker network for PostgreSQL standby
+      community.docker.docker_network:
+        name: "{{ postgres_network }}"
+        state: present
+
+    - name: Take base backup from primary into standby data directory
+      ansible.builtin.shell: |
+        docker run --rm \
+          --user 999:999 \
+          -e PGPASSWORD="{{ postgres_replication_password }}" \
+          -v "{{ postgres_data_dir }}:/var/lib/postgresql/data" \
+          "{{ postgres_image }}" \
+          pg_basebackup \
+            -h "{{ postgres_primary_ip }}" \
+            -p "{{ postgres_port }}" \
+            -U "{{ postgres_replication_user }}" \
+            -D "/var/lib/postgresql/data" \
+            -Fp \
+            -Xs \
+            -P \
+            -R
+      no_log: true
+      changed_when: true
+
+    - name: Enable hot standby explicitly
+      ansible.builtin.lineinfile:
+        path: "{{ postgres_data_dir }}/postgresql.auto.conf"
+        line: "hot_standby = on"
+        create: true
+        owner: "999"
+        group: "999"
+        mode: "0600"
+
+    - name: Run PostgreSQL standby container
+      community.docker.docker_container:
+        name: "{{ postgres_container_name }}"
+        image: "{{ postgres_image }}"
+        state: started
+        restart_policy: "{{ container_restart_policy }}"
+        recreate: true
+        networks:
+          - name: "{{ postgres_network }}"
+        published_ports:
+          - "{{ postgres_port }}:5432"
+        env:
+          PGDATA: /var/lib/postgresql/data
+        volumes:
+          - "{{ postgres_data_dir }}:/var/lib/postgresql/data"

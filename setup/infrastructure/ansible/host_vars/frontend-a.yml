@@ -1,0 +1,3 @@
+---
+redis_host_ip: "{{ hostvars['middleware-b']['private_ip'] }}"
+result_db_host_ip: "{{ hostvars['db-1']['private_ip'] }}"

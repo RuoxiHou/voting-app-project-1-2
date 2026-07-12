@@ -1,0 +1,4 @@
+---
+private_ip: "{{ hostvars['db-2']['private_ip'] }}"
+postgres_role: standby
+postgres_primary_ip: "{{ hostvars['db-1']['private_ip'] }}"

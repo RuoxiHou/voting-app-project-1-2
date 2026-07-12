@@ -1,0 +1,46 @@
+---
+# Docker network names
+frontend_network: voting_frontend_net
+middleware_network: voting_middleware_net
+postgres_network: voting_postgres_net
+
+# Images
+vote_image: ruoxihou/voting-app:latest
+result_image: ruoxihou/result-app:latest
+worker_image: ruoxihou/worker-app
+redis_image: redis:7.2-alpine
+postgres_image: postgres:16-alpine
+
+# Container names
+vote_container_name: vote
+result_container_name: result
+redis_container_name: redis
+worker_container_name: worker
+postgres_container_name: postgres
+
+# App ports on frontend EC2
+vote_host_port: 5000
+vote_container_port: 80
+
+result_host_port: 3000
+result_container_port: 80
+
+# Redis
+redis_port: 6379
+
+# PostgreSQL
+postgres_port: 5432
+postgres_db: postgres
+postgres_user: postgres
+postgres_password: postgres
+
+# Replication
+postgres_replication_user: replicator
+postgres_replication_password: replicator_password
+
+# Persistent data dirs on EC2
+postgres_data_dir: /opt/voting-postgres/data
+postgres_init_dir: /opt/voting-postgres/init
+
+# Docker restart policy
+container_restart_policy: unless-stopped

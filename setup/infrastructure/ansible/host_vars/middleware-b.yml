@@ -1,0 +1,2 @@
+---
+postgres_primary_ip: "{{ hostvars['db-1']['private_ip'] }}"

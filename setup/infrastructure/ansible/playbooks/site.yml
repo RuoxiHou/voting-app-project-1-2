@@ -1,0 +1,15 @@
+---
+- name: Prepare Docker hosts
+  import_playbook: 00_install_docker.yml
+
+- name: Deploy PostgreSQL primary
+  import_playbook: 01_psql_primary.yml
+
+- name: Deploy PostgreSQL standby
+  import_playbook: 02_psql_standby.yml
+
+- name: Deploy Redis and Worker
+  import_playbook: 03_middleware.yml
+
+- name: Deploy Vote and Result
+  import_playbook: 04_frontend.yml
