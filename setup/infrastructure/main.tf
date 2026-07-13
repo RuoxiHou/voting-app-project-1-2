@@ -63,7 +63,7 @@ resource "aws_subnet" "subnets" {
   map_public_ip_on_launch = each.value.public
 
   tags = {
-    Name = "${local.vpc_name}-subnet-${each.key}"
+    Name = "project1-${var.student_name}-subnet-${each.key}"
   }
 }
 
@@ -72,7 +72,7 @@ resource "aws_internet_gateway" "igw" {
   vpc_id = aws_vpc.main.id
 
   tags = {
-    Name = "${local.vpc_name}-igw"
+    Name = "project1-${var.student_name}-igw"
   }
 }
 
@@ -86,7 +86,7 @@ resource "aws_route_table" "public" {
   }
 
   tags = {
-    Name = "${local.vpc_name}-public-rt"
+    Name = "project1-${var.student_name}-public-rt"
   }
 }
 
@@ -103,7 +103,7 @@ resource "aws_route_table_association" "public" {
 
 # Application Load Balancer
 resource "aws_lb" "alb" {
-  name               = "${local.vpc_name}-alb"
+  name               = "project1-${var.student_name}-alb"
   load_balancer_type = "application"
   internal           = false
 
@@ -116,13 +116,13 @@ resource "aws_lb" "alb" {
   ]
 
   tags = {
-    Name = "${local.vpc_name}-alb"
+    Name = "project1-${var.student_name}-alb"
   }
 }
 
 # ALB security group
 resource "aws_security_group" "alb" {
-  name        = "${local.vpc_name}-alb-sg"
+  name        = "project1-${var.student_name}-alb-sg"
   vpc_id      = aws_vpc.main.id
 
   ingress {
@@ -149,7 +149,7 @@ resource "aws_security_group" "alb" {
 
 # Bastion security group
 resource "aws_security_group" "bastion" {
-  name   = "${local.vpc_name}-bastion-sg"
+  name   = "project1-${var.student_name}-bastion-sg"
   vpc_id = aws_vpc.main.id
 
   ingress {
@@ -175,13 +175,13 @@ resource "aws_security_group" "bastion" {
   }
 
   tags = {
-    Name = "${local.vpc_name}-bastion-sg"
+    Name = "project1-${var.student_name}-bastion-sg"
   }
 }
 
 # Frontend security group
 resource "aws_security_group" "frontend" {
-  name   = "${local.vpc_name}-frontend-sg"
+  name   = "project1-${var.student_name}-frontend-sg"
   vpc_id = aws_vpc.main.id
 
   # Flask vote application
@@ -223,7 +223,7 @@ resource "aws_security_group" "frontend" {
 
 # Redis-Worker security group
 resource "aws_security_group" "middleware" {
-  name        = "${local.vpc_name}-middleware-sg"
+  name        = "project1-${var.student_name}-middleware-sg"
   description = "Security group for Worker + Redis instances"
   vpc_id      = aws_vpc.main.id
 
@@ -258,13 +258,13 @@ resource "aws_security_group" "middleware" {
   }
 
   tags = {
-    Name = "${local.vpc_name}-middleware-sg"
+    Name = "project1-${var.student_name}-middleware-sg"
   }
 }
 
 # PostgreSQL security group
 resource "aws_security_group" "database" {
-  name        = "${local.vpc_name}-database-sg"
+  name        = "project1-${var.student_name}-database-sg"
   description = "Allow PostgreSQL from worker and result"
   vpc_id      = aws_vpc.main.id
 
@@ -315,13 +315,13 @@ resource "aws_security_group" "database" {
   }
 
   tags = {
-    Name = "${local.vpc_name}-database-sg"
+    Name = "project1-${var.student_name}-database-sg"
   }
 }
 
 # Create Vote target group
 resource "aws_lb_target_group" "vote" {
-  name     = "${local.vpc_name}-vote-tg"
+  name     = "project1-${var.student_name}-vote-tg"
   port     = var.vote_port
   protocol = "HTTP"
   vpc_id   = aws_vpc.main.id
@@ -338,13 +338,13 @@ resource "aws_lb_target_group" "vote" {
   }
 
   tags = {
-    Name = "${local.vpc_name}-vote-tg"
+    Name = "project1-${var.student_name}-vote-tg"
   }
 }
 
 # Create Result target group
 resource "aws_lb_target_group" "result" {
-  name     = "${local.vpc_name}-result-tg"
+  name     = "project1-${var.student_name}-result-tg"
   port     = var.result_port
   protocol = "HTTP"
   vpc_id   = aws_vpc.main.id
@@ -361,7 +361,7 @@ resource "aws_lb_target_group" "result" {
   }
 
   tags = {
-    Name = "${local.vpc_name}-result-tg"
+    Name = "project1-${var.student_name}-result-tg"
   }
 }
 
@@ -426,7 +426,7 @@ resource "aws_instance" "bastion" {
   ]
 
   tags = {
-    Name = "${local.vpc_name}-bastion-${each.key}"
+    Name = "project1-${var.student_name}-bastion-${each.key}"
     Role = "Bastion"
   }
 }
@@ -445,7 +445,7 @@ resource "aws_instance" "frontend" {
   vpc_security_group_ids = [aws_security_group.frontend.id]
   associate_public_ip_address = true
   tags = {
-    Name = "${local.vpc_name}-frontend-${each.key}"
+    Name = "project1-${var.student_name}-frontend-${each.key}"
   }
 }
 
@@ -475,7 +475,7 @@ resource "aws_eip" "nat" {
   }
   domain = "vpc"
   tags = {
-    Name = "${local.vpc_name}-nat-eip-${each.key}"
+    Name = "project1-${var.student_name}-nat-eip-${each.key}"
   }
 }
 
@@ -492,7 +492,7 @@ resource "aws_nat_gateway" "nat" {
   ]
 
   tags = {
-    Name = "${local.vpc_name}-nat-${each.key}"
+    Name = "project1-${var.student_name}-nat-${each.key}"
   }
 }
 
@@ -508,7 +508,7 @@ resource "aws_route_table" "private" {
     nat_gateway_id = aws_nat_gateway.nat[each.value].id
   }
   tags = {
-    Name = "${local.vpc_name}-private-${each.key}"
+    Name = "project1-${var.student_name}-private-${each.key}"
   }
 }
 
@@ -543,7 +543,7 @@ resource "aws_instance" "middleware" {
 #  user_data = file("worker-userdata.sh")
 
   tags = {
-    Name = "${local.vpc_name}-middleware-${each.key}"
+    Name = "project1-${var.student_name}-middleware-${each.key}"
     Role = "Worker + Redis"
   }
 }
@@ -566,7 +566,7 @@ resource "aws_instance" "postgres_primary" {
 #  user_data = file("postgres-primary.sh")
 
   tags = {
-    Name = "${local.vpc_name}-postgres-primary"
+    Name = "project1-${var.student_name}-postgres-primary"
     Role = "Primary"
   }
 }
@@ -589,7 +589,7 @@ resource "aws_instance" "postgres_replica" {
 #  user_data = file("postgres-standby.sh")
 
   tags = {
-    Name = "${local.vpc_name}-postgres-standby"
+    Name = "project1-${var.student_name}-postgres-standby"
     Role = "Replica"
   }
 }
