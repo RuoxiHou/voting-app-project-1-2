@@ -1,3 +1,0 @@
----
-private_ip: "{{ hostvars['db-1']['private_ip'] }}"
-postgres_role: primary

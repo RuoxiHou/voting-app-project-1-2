@@ -34,15 +34,16 @@
         image: "{{ worker_image }}"
         state: started
         restart_policy: "{{ container_restart_policy }}"
+        recreate: true
+        pull: true
         networks:
           - name: "{{ middleware_network }}"
         env:
           REDIS_HOST: "redis"
           REDIS_PORT: "{{ redis_port | string }}"
-          POSTGRES_HOST: "{{ postgres_primary_ip }}"
-          POSTGRES_PORT: "{{ postgres_port | string }}"
-          POSTGRES_DB: "{{ postgres_db }}"
-          POSTGRES_USER: "{{ postgres_user }}"
-          POSTGRES_PASSWORD: "{{ postgres_password }}"
-        etc_hosts:
-          db: "{{ postgres_primary_ip }}"
+
+          DB_HOST: "{{ postgres_primary_host }}"
+          DB_PORT: "{{ postgres_port | string }}"
+          DB_USERNAME: "{{ postgres_user }}"
+          DB_PASSWORD: "{{ postgres_password }}"
+          DB_NAME: "{{ postgres_db }}"

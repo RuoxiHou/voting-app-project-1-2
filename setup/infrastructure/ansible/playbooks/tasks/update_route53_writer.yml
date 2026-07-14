@@ -1,0 +1,36 @@
+---
+- name: Create Route 53 change batch file
+  ansible.builtin.copy:
+    dest: "/tmp/route53-postgres-writer-change.json"
+    mode: "0600"
+    content: |
+      {
+        "Comment": "Update PostgreSQL writer endpoint",
+        "Changes": [
+          {
+            "Action": "UPSERT",
+            "ResourceRecordSet": {
+              "Name": "{{ postgres_writer_fqdn }}",
+              "Type": "A",
+              "TTL": 30,
+              "ResourceRecords": [
+                {
+                  "Value": "{{ route53_target_ip }}"
+                }
+              ]
+            }
+          }
+        ]
+      }
+
+- name: Update Route 53 writer record
+  ansible.builtin.command: >
+    aws route53 change-resource-record-sets
+    --hosted-zone-id {{ route53_zone_id }}
+    --change-batch file:///tmp/route53-postgres-writer-change.json
+  register: route53_change_result
+  changed_when: true
+
+- name: Show Route 53 change result
+  ansible.builtin.debug:
+    var: route53_change_result.stdout

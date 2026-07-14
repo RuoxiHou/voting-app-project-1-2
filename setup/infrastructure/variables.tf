@@ -189,3 +189,33 @@ variable "app_protocol" {
   type        = string
   default     = "HTTP"
 }
+
+variable "postgres_writer_record_name" {
+  description = "Writer DNS record for PostgreSQL"
+  type        = string
+  default     = "postgres-writer"
+}
+
+variable "postgres_primary_record_name" {
+  description = "Stable DNS record for original PostgreSQL primary"
+  type        = string
+  default     = "postgres-primary"
+}
+
+variable "postgres_standby_record_name" {
+  description = "Stable DNS record for PostgreSQL standby"
+  type        = string
+  default     = "postgres-standby"
+}
+
+variable "route53_record_ttl" {
+  description = "TTL for PostgreSQL DNS records"
+  type        = number
+  default     = 30
+}
+
+variable "private_route53_zone_name" {
+  description = "Private Route53 zone for internal services"
+  type        = string
+  default     = "project.internal"
+}

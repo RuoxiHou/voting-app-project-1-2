@@ -17,6 +17,8 @@
         image: "{{ vote_image }}"
         state: started
         restart_policy: "{{ container_restart_policy }}"
+        recreate: true
+        pull: true
         networks:
           - name: "{{ frontend_network }}"
         published_ports:
@@ -24,8 +26,6 @@
         env:
           REDIS_HOST: "{{ redis_host_ip }}"
           REDIS_PORT: "{{ redis_port | string }}"
-        etc_hosts:
-          redis: "{{ redis_host_ip }}"
 
     - name: Run Result container
       community.docker.docker_container:
@@ -33,15 +33,15 @@
         image: "{{ result_image }}"
         state: started
         restart_policy: "{{ container_restart_policy }}"
+        recreate: true
+        pull: true
         networks:
           - name: "{{ frontend_network }}"
         published_ports:
           - "{{ result_host_port }}:{{ result_container_port }}"
         env:
-          POSTGRES_HOST: "{{ result_db_host_ip }}"
-          POSTGRES_PORT: "{{ postgres_port | string }}"
-          POSTGRES_DB: "{{ postgres_db }}"
-          POSTGRES_USER: "{{ postgres_user }}"
-          POSTGRES_PASSWORD: "{{ postgres_password }}"
-        etc_hosts:
-          db: "{{ result_db_host_ip }}"
+          PG_HOST: "{{ result_db_host }}"
+          PG_PORT: "{{ postgres_port | string }}"
+          PG_USER: "{{ postgres_user }}"
+          PG_PASSWORD: "{{ postgres_password }}"
+          PG_DATABASE: "{{ postgres_db }}"

@@ -7,7 +7,7 @@ postgres_network: voting_postgres_net
 # Images
 vote_image: ruoxihou/voting-app:latest
 result_image: ruoxihou/result-app:latest
-worker_image: ruoxihou/worker-app
+worker_image: ruoxihou/worker-app:latest
 redis_image: redis:7.2-alpine
 postgres_image: postgres:16-alpine
 

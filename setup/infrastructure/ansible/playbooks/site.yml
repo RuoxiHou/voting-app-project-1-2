@@ -13,3 +13,6 @@
 
 - name: Deploy Vote and Result
   import_playbook: 04_frontend.yml
+
+- name: Validate normal PostgreSQL HA state
+  import_playbook: 92_validate_postgres_ha.yml
