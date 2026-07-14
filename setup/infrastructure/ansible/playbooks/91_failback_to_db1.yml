@@ -1,72 +1,88 @@
 ---
-- name: Confirm writer DNS currently points to db-2 before failback
-  hosts: localhost
+# PRE-CHECKS
+
+- name: Verify db-2 is currently primary
+  hosts: postgres_standby
+  become: true
   gather_facts: false
+
   tasks:
-    - name: Resolve writer DNS
+
+    - name: Check PostgreSQL role on db-2
       ansible.builtin.shell: |
-        getent hosts {{ postgres_writer_fqdn }} | awk '{print $1}' | head -n 1
-      register: writer_dns_ip
+        docker exec postgres psql \
+          -U {{ postgres_user }} \
+          -d {{ postgres_db }} \
+          -tAc "SELECT pg_is_in_recovery();"
+      register: db2_role
       changed_when: false
 
-    - name: Fail if writer is not pointing to db-2
+    - name: Abort if db-2 is not primary
       ansible.builtin.fail:
-        msg: "Refusing failback because writer DNS is not pointing to db-2."
-      when: writer_dns_ip.stdout | trim != db2_private_ip
-      
+        msg: "Refusing failback because db-2 is not primary."
+      when: db2_role.stdout | trim != "f"
+
+# STOP APPLICATION WRITES
+
 - name: Stop workers before failback
   hosts: middleware
   become: true
+  gather_facts: false
+
   tasks:
+
     - name: Stop worker container
       ansible.builtin.shell: |
         docker stop worker || true
       changed_when: true
 
-- name: Rebuild db-1 as standby from current primary db-2
+# REBUILD DB-1 FROM DB-2
+
+- name: Rebuild db-1 as standby from db-2
   hosts: postgres_primary
   become: true
+  gather_facts: false
+
   tasks:
-    - name: Remove db-1 postgres container
+
+    - name: Remove postgres container
       ansible.builtin.shell: |
         docker rm -f postgres || true
       changed_when: true
 
-    - name: Clean db-1 data directory
+    - name: Clean PostgreSQL data directory
       ansible.builtin.shell: |
         rm -rf {{ postgres_data_dir }}/*
         chown -R 999:999 {{ postgres_data_dir }}
         chmod 700 {{ postgres_data_dir }}
       changed_when: true
 
-    - name: Take base backup from db-2 into db-1
+    - name: Base backup from db-2
       ansible.builtin.shell: |
         docker run --rm \
           --user 999:999 \
           -e PGPASSWORD="{{ postgres_replication_password }}" \
           -v "{{ postgres_data_dir }}:/var/lib/postgresql/data" \
-          "{{ postgres_image }}" \
+          {{ postgres_image }} \
           pg_basebackup \
-            -h "{{ db2_private_ip }}" \
-            -p "{{ postgres_port }}" \
-            -U "{{ postgres_replication_user }}" \
-            -D "/var/lib/postgresql/data" \
-            -Fp \
-            -Xs \
-            -P \
-            -R
+          -h {{ db2_private_ip }} \
+          -p {{ postgres_port }} \
+          -U {{ postgres_replication_user }} \
+          -D /var/lib/postgresql/data \
+          -Fp \
+          -Xs \
+          -P \
+          -R
       no_log: true
       changed_when: true
 
-    - name: Start db-1 as standby first
+    - name: Start db-1 as standby
       community.docker.docker_container:
         name: "{{ postgres_container_name }}"
         image: "{{ postgres_image }}"
         state: started
         restart_policy: "{{ container_restart_policy }}"
         recreate: true
-        networks:
-          - name: "{{ postgres_network }}"
         published_ports:
           - "{{ postgres_port }}:5432"
         env:
@@ -74,74 +90,113 @@
         volumes:
           - "{{ postgres_data_dir }}:/var/lib/postgresql/data"
 
-    - name: Confirm db-1 is currently standby
+    - name: Verify db-1 is standby
       ansible.builtin.shell: |
-        docker exec postgres psql -U {{ postgres_user }} -d {{ postgres_db }} -tAc "SELECT pg_is_in_recovery();"
-      register: db1_standby_check
+        docker exec postgres psql \
+          -U {{ postgres_user }} \
+          -d {{ postgres_db }} \
+          -tAc "SELECT pg_is_in_recovery();"
+      register: db1_role
       retries: 20
       delay: 3
-      until: db1_standby_check.stdout | trim == "t"
+      until: db1_role.stdout | trim == "t"
       changed_when: false
 
-- name: Promote db-1 back to primary
-  hosts: postgres_primary
-  become: true
-  tasks:
-    - name: Promote db-1
-      ansible.builtin.shell: |
-        docker exec postgres pg_ctl promote -D /var/lib/postgresql/data
-      changed_when: true
+# STOP DB-2 TO PREVENT SPLIT BRAIN
 
-    - name: Wait until db-1 is primary
-      ansible.builtin.shell: |
-        docker exec postgres psql -U {{ postgres_user }} -d {{ postgres_db }} -tAc "SELECT pg_is_in_recovery();"
-      register: db1_after_promote
-      retries: 20
-      delay: 3
-      until: db1_after_promote.stdout | trim == "f"
-      changed_when: false
-
-- name: Update Route 53 writer back to db-1
-  hosts: localhost
-  gather_facts: false
-  vars:
-    route53_target_ip: "{{ db1_private_ip }}"
-  tasks:
-    - name: Update writer DNS to db-1
-      ansible.builtin.import_tasks: tasks/update_route53_writer.yml
-
-- name: Rebuild db-2 as standby from db-1
+- name: Stop current primary db-2
   hosts: postgres_standby
   become: true
+  gather_facts: false
+
   tasks:
-    - name: Remove db-2 postgres container
+
+    - name: Stop postgres container
+      ansible.builtin.shell: |
+        docker stop postgres
+      changed_when: true
+
+# PROMOTE DB-1
+
+- name: Promote db-1 to primary
+  hosts: postgres_primary
+  become: true
+  gather_facts: false
+
+  tasks:
+
+    - name: Promote PostgreSQL
+      ansible.builtin.shell: |
+        docker exec -u postgres postgres \
+          psql -U {{ postgres_user }} \
+          -d {{ postgres_db }} \
+          -c "SELECT pg_promote();"
+      changed_when: true
+    
+    - name: Wait until db-1 becomes primary
+      ansible.builtin.shell: |
+        docker exec postgres psql \
+          -U {{ postgres_user }} \
+          -d {{ postgres_db }} \
+          -tAc "SELECT pg_is_in_recovery();"
+      register: db1_primary
+      retries: 20
+      delay: 3
+      until: db1_primary.stdout | trim == "f"
+      changed_when: false
+
+# UPDATE ROUTE53
+
+- name: Point writer DNS back to db-1
+  hosts: localhost
+  gather_facts: false
+
+  vars:
+    route53_target_ip: "{{ db1_private_ip }}"
+
+  tasks:
+
+    - name: Update Route53 writer record
+      ansible.builtin.import_tasks:
+        file: tasks/update_route53_writer.yml
+
+# REBUILD DB-2 FROM DB-1
+
+- name: Rebuild db-2 as standby
+  hosts: postgres_standby
+  become: true
+  gather_facts: false
+
+  tasks:
+
+    - name: Remove postgres container
       ansible.builtin.shell: |
         docker rm -f postgres || true
       changed_when: true
 
-    - name: Clean db-2 data directory
+    - name: Clean PostgreSQL data directory
       ansible.builtin.shell: |
         rm -rf {{ postgres_data_dir }}/*
         chown -R 999:999 {{ postgres_data_dir }}
         chmod 700 {{ postgres_data_dir }}
       changed_when: true
 
-    - name: Take base backup from db-1 into db-2
+    - name: Base backup from db-1
       ansible.builtin.shell: |
         docker run --rm \
           --user 999:999 \
           -e PGPASSWORD="{{ postgres_replication_password }}" \
           -v "{{ postgres_data_dir }}:/var/lib/postgresql/data" \
-          "{{ postgres_image }}" \
+          {{ postgres_image }} \
           pg_basebackup \
-            -h "{{ db1_private_ip }}" \
-            -p "{{ postgres_port }}" \
-            -U "{{ postgres_replication_user }}" \
-            -D "/var/lib/postgresql/data" \
-            -Fp \
-            -Xs \
-            -P \
-            -R
+          -h {{ db1_private_ip }} \
+          -p {{ postgres_port }} \
+          -U {{ postgres_replication_user }} \
+          -D /var/lib/postgresql/data \
+          -Fp \
+          -Xs \
+          -P \
+          -R
       no_log: true
       changed_when: true
 
@@ -152,8 +207,6 @@
         state: started
         restart_policy: "{{ container_restart_policy }}"
         recreate: true
-        networks:
-          - name: "{{ postgres_network }}"
         published_ports:
           - "{{ postgres_port }}:5432"
         env:
@@ -161,20 +214,28 @@
         volumes:
           - "{{ postgres_data_dir }}:/var/lib/postgresql/data"
 
-    - name: Confirm db-2 is standby again
+    - name: Verify db-2 is standby
       ansible.builtin.shell: |
-        docker exec postgres psql -U {{ postgres_user }} -d {{ postgres_db }} -tAc "SELECT pg_is_in_recovery();"
-      register: db2_standby_check
+        docker exec postgres psql \
+          -U {{ postgres_user }} \
+          -d {{ postgres_db }} \
+          -tAc "SELECT pg_is_in_recovery();"
+      register: db2_role_after
       retries: 20
       delay: 3
-      until: db2_standby_check.stdout | trim == "t"
+      until: db2_role_after.stdout | trim == "t"
       changed_when: false
 
-- name: Restart application containers after failback
+# Start the application
+
+- name: Restart applications
   hosts: middleware:frontend
   become: true
+  gather_facts: false
+
   tasks:
-    - name: Restart worker and result containers if present
+
+    - name: Restart worker and result containers
       ansible.builtin.shell: |
         docker restart worker 2>/dev/null || true
         docker restart result 2>/dev/null || true

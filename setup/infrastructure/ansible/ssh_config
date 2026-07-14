@@ -1,0 +1,36 @@
+Host *
+    User ec2-user
+    IdentityFile ./ruoxi-project1-ssh-key.pem
+    IdentitiesOnly yes
+    StrictHostKeyChecking no
+    UserKnownHostsFile /dev/null
+
+Host bastion-a
+    HostName 54.71.153.219
+
+Host bastion-c
+    HostName 54.201.51.68
+
+Host frontend-a
+    HostName 10.5.1.227
+    ProxyJump bastion-a
+
+Host frontend-c
+    HostName 10.5.3.213
+    ProxyJump bastion-c
+
+Host middleware-b
+    HostName 10.5.2.89
+    ProxyJump bastion-a
+
+Host middleware-d
+    HostName 10.5.4.39
+    ProxyJump bastion-c
+
+Host db-1 postgres-primary
+    HostName 10.5.2.134
+    ProxyJump bastion-a
+
+Host db-2 postgres-standby
+    HostName 10.5.4.44
+    ProxyJump bastion-c
