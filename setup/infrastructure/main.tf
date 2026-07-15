@@ -1,0 +1,733 @@
+#Create a new vpc 
+resource "aws_vpc" "main" {
+  cidr_block           = var.vpc_cidr_block
+  enable_dns_support   = true
+  enable_dns_hostnames = true
+  tags = {
+    Name      = "vpc-project1-${var.student_name}"
+    ManagedBy = "Terraform"
+  }
+}
+
+# Create 4 subnets in 2 different AZs
+locals {
+  vpc_name = aws_vpc.main.tags["Name"]
+
+  subnets = {
+    a = {
+      cidr   = var.subnet_a_cidr
+      az     = var.az_1
+      public = true
+    }
+    b = {
+      cidr   = var.subnet_b_cidr
+      az     = var.az_1
+      public = false
+    }
+    c = {
+      cidr   = var.subnet_c_cidr
+      az     = var.az_2
+      public = true
+    }
+    d = {
+      cidr   = var.subnet_d_cidr
+      az     = var.az_2
+      public = false
+    }
+  }
+
+  # Application topology
+  topology = {
+    az1 = {
+      bastion    = "a"
+      frontend   = "a"
+      middleware = "b"
+      postgres   = "b"
+    }
+
+    az2 = {
+      bastion    = "c"
+      frontend   = "c"
+      middleware = "d"
+      postgres   = "d"
+    }
+  }
+}
+
+resource "aws_subnet" "subnets" {
+  for_each = local.subnets
+
+  vpc_id                  = aws_vpc.main.id
+  cidr_block              = each.value.cidr
+  availability_zone       = each.value.az
+  map_public_ip_on_launch = each.value.public
+
+  tags = {
+    Name = "project1-${var.student_name}-subnet-${each.key}"
+  }
+}
+
+# Create IGW
+resource "aws_internet_gateway" "igw" {
+  vpc_id = aws_vpc.main.id
+
+  tags = {
+    Name = "project1-${var.student_name}-igw"
+  }
+}
+
+# Create a route table for the IGW
+resource "aws_route_table" "public" {
+  vpc_id = aws_vpc.main.id
+
+  route {
+    cidr_block = var.allowed_cidr_ipv4_public
+    gateway_id = aws_internet_gateway.igw.id
+  }
+
+  tags = {
+    Name = "project1-${var.student_name}-public-rt"
+  }
+}
+
+# Add the public route table to the 2 public subnets
+resource "aws_route_table_association" "public" {
+  for_each = {
+    for key, subnet in local.subnets : key => subnet
+    if subnet.public
+  }
+
+  subnet_id      = aws_subnet.subnets[each.key].id
+  route_table_id = aws_route_table.public.id
+}
+
+# Application Load Balancer
+resource "aws_lb" "alb" {
+  name               = "project1-${var.student_name}-alb"
+  load_balancer_type = "application"
+  internal           = false
+
+  security_groups = [aws_security_group.alb.id]
+
+  subnets = [
+    for key, subnet in local.subnets :
+    aws_subnet.subnets[key].id
+    if subnet.public
+  ]
+
+  tags = {
+    Name = "project1-${var.student_name}-alb"
+  }
+}
+
+# ALB security group
+resource "aws_security_group" "alb" {
+  name        = "project1-${var.student_name}-alb-sg"
+  vpc_id      = aws_vpc.main.id
+
+  ingress {
+    from_port   = var.vote_outside_port
+    to_port     = var.vote_outside_port
+    protocol    = var.ingress_protocol
+    cidr_blocks = [var.allowed_cidr_ipv4_public]
+  }
+
+  ingress {
+    from_port   = var.result_outside_port
+    to_port     = var.result_outside_port
+    protocol    = var.ingress_protocol
+    cidr_blocks = [var.allowed_cidr_ipv4_public]
+  }
+
+  egress {
+    from_port   = var.egress_port
+    to_port     = var.egress_port
+    protocol    = var.egress_ip_protocol
+    cidr_blocks = [var.allowed_cidr_ipv4_public]
+  }
+}
+
+# Bastion security group
+resource "aws_security_group" "bastion" {
+  name   = "project1-${var.student_name}-bastion-sg"
+  vpc_id = aws_vpc.main.id
+
+  ingress {
+    description = "SSH from administrator machine"
+    from_port   = var.ssh_port
+    to_port     = var.ssh_port
+    protocol    = var.ingress_protocol
+
+    cidr_blocks = [
+      var.allowed_cidr_ipv4_public
+    ]
+  }
+
+  egress {
+    description = "Allow outbound traffic"
+    from_port   = var.egress_port
+    to_port     = var.egress_port
+    protocol    = var.egress_ip_protocol
+
+    cidr_blocks = [
+      var.allowed_cidr_ipv4_public
+    ]
+  }
+
+  tags = {
+    Name = "project1-${var.student_name}-bastion-sg"
+  }
+}
+
+# Frontend security group
+resource "aws_security_group" "frontend" {
+  name   = "project1-${var.student_name}-frontend-sg"
+  vpc_id = aws_vpc.main.id
+
+  # Flask vote application
+  ingress {
+    description     = "Allow ALB to reach Vote Flask app"
+    from_port       = var.vote_outside_port
+    to_port         = var.vote_outside_port
+    protocol        = var.ingress_protocol
+    security_groups = [aws_security_group.alb.id]
+  }
+
+  # Node.js result application
+  ingress {
+    description     = "Allow ALB to reach Result Node app"
+    from_port       = var.result_outside_port
+    to_port         = var.result_outside_port
+    protocol        = var.ingress_protocol
+    security_groups = [aws_security_group.alb.id]
+  }
+
+  ingress {
+    description     = "SSH from bastion"
+    from_port   = var.ssh_port
+    to_port     = var.ssh_port
+    protocol    = var.ingress_protocol
+    security_groups = [
+      aws_security_group.bastion.id
+    ]
+  }
+
+  egress {
+    description = "Allow outbound traffic"
+    from_port   = var.egress_port
+    to_port     = var.egress_port
+    protocol    = var.egress_ip_protocol
+    cidr_blocks = [var.allowed_cidr_ipv4_public]
+  }
+}
+
+# Redis-Worker security group
+resource "aws_security_group" "middleware" {
+  name        = "project1-${var.student_name}-middleware-sg"
+  description = "Security group for Worker + Redis instances"
+  vpc_id      = aws_vpc.main.id
+
+  ingress {
+    description = "Allow Frontend to access Redis"
+    from_port   = var.redis_outside_port
+    to_port     = var.redis_outside_port
+    protocol    = var.ingress_protocol
+
+    security_groups = [
+      aws_security_group.frontend.id
+    ]
+  }
+
+  ingress {
+    description = "SSH from bastion"
+    from_port   = var.ssh_port
+    to_port     = var.ssh_port
+    protocol    = var.ingress_protocol
+
+    security_groups = [
+      aws_security_group.bastion.id
+    ]
+  }
+
+  egress {
+    description = "Allow outbound traffic"
+    from_port   = var.egress_port
+    to_port     = var.egress_port
+    protocol    = var.egress_ip_protocol
+    cidr_blocks = [var.allowed_cidr_ipv4_public]
+  }
+
+  tags = {
+    Name = "project1-${var.student_name}-middleware-sg"
+  }
+}
+
+# PostgreSQL security group
+resource "aws_security_group" "database" {
+  name        = "project1-${var.student_name}-database-sg"
+  description = "Allow PostgreSQL from worker and result"
+  vpc_id      = aws_vpc.main.id
+
+  ingress {
+    description     = "Allow worker to write votes"
+    from_port       = var.psql_outside_port
+    to_port         = var.psql_outside_port
+    protocol        = var.ingress_protocol
+    security_groups = [
+      aws_security_group.middleware.id
+    ]
+  }
+
+  ingress {
+    description     = "SSH from bastion"
+    from_port   = var.ssh_port
+    to_port     = var.ssh_port
+    protocol    = var.ingress_protocol
+    security_groups = [
+      aws_security_group.bastion.id
+    ]
+  }
+
+  ingress {
+    description = "Result reads from PostgreSQL"
+    from_port = var.psql_outside_port
+    to_port   = var.psql_outside_port
+    protocol  = var.ingress_protocol
+    security_groups = [
+      aws_security_group.frontend.id
+    ]
+  }
+
+  ingress {
+    description = "Replication"
+    from_port = var.psql_outside_port
+    to_port   = var.psql_outside_port
+    protocol  = var.ingress_protocol
+    self = true
+  }
+
+  egress {
+    description = "Allow outbound traffic"
+    from_port   = var.egress_port
+    to_port     = var.egress_port
+    protocol    = var.egress_ip_protocol
+    cidr_blocks = [var.allowed_cidr_ipv4_public]
+  }
+
+  tags = {
+    Name = "project1-${var.student_name}-database-sg"
+  }
+}
+
+# Create Vote target group
+resource "aws_lb_target_group" "vote" {
+  name     = "project1-${var.student_name}-vote-tg"
+  port     = var.vote_port
+  protocol = "HTTP"
+  vpc_id   = aws_vpc.main.id
+
+  health_check {
+    enabled             = true
+    healthy_threshold   = 3
+    unhealthy_threshold = 3
+    timeout             = 5
+    interval            = 30
+
+    path                = "/"
+    matcher             = "200"
+  }
+
+  tags = {
+    Name = "project1-${var.student_name}-vote-tg"
+  }
+}
+
+# Create Result target group
+resource "aws_lb_target_group" "result" {
+  name     = "project1-${var.student_name}-result-tg"
+  port     = var.result_port
+  protocol = "HTTP"
+  vpc_id   = aws_vpc.main.id
+
+  health_check {
+    enabled             = true
+    healthy_threshold   = 3
+    unhealthy_threshold = 3
+    timeout             = 5
+    interval            = 30
+
+    path                = "/"
+    matcher             = "200"
+  }
+
+  tags = {
+    Name = "project1-${var.student_name}-result-tg"
+  }
+}
+
+# Listener rule of the ALB on Vote app
+resource "aws_lb_listener" "vote" {
+  load_balancer_arn = aws_lb.alb.arn
+
+  port     = var.vote_outside_port
+  protocol = var.app_protocol
+
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.vote.arn
+  }
+}
+
+# Listener rule of the ALB on Result app
+resource "aws_lb_listener" "result" {
+  load_balancer_arn = aws_lb.alb.arn
+
+  port     = var.result_outside_port
+  protocol = var.app_protocol
+
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.result.arn
+  }
+}
+
+# aws_image
+data "aws_ami" "al2023" {
+  most_recent = true
+  owners      = var.ami_owners
+
+  filter {
+    name   = var.ami_filter_name_key
+    values = [var.ami_name_pattern]
+  }
+
+  filter {
+    name   = var.ami_filter_arch_key
+    values = [var.ami_architecture]
+  }
+}
+
+# Bastion hosts for Ansible SSH access (one per AZ)
+resource "aws_instance" "bastion" {
+  for_each = {
+    a = "a"
+    c = "c"
+  }
+  ami           = data.aws_ami.al2023.id
+  instance_type = var.instance_type
+  subnet_id = aws_subnet.subnets[each.value].id
+
+  key_name = aws_key_pair.my_key.key_name
+
+  associate_public_ip_address = true
+
+  vpc_security_group_ids = [
+    aws_security_group.bastion.id
+  ]
+
+  tags = {
+    Name = "project1-${var.student_name}-bastion-${each.key}"
+    Role = "Bastion"
+  }
+}
+
+# Create Frontend ec2 instance 
+resource "aws_instance" "frontend" {
+  for_each = {
+    for key, subnet in local.subnets : key => subnet
+    if subnet.public
+  }
+
+  subnet_id      = aws_subnet.subnets[each.key].id
+  ami                    = data.aws_ami.al2023.id
+  instance_type          = var.instance_type
+  key_name               = aws_key_pair.my_key.key_name
+  vpc_security_group_ids = [aws_security_group.frontend.id]
+  associate_public_ip_address = true
+  tags = {
+    Name = "project1-${var.student_name}-frontend-${each.key}"
+  }
+}
+
+# Register all frontend instances with the Vote target group
+resource "aws_lb_target_group_attachment" "vote" {
+  for_each = aws_instance.frontend
+
+  target_group_arn = aws_lb_target_group.vote.arn
+  target_id        = each.value.id
+  port             = var.vote_outside_port
+}
+
+# Register all frontend instances with the Result target group
+resource "aws_lb_target_group_attachment" "result" {
+  for_each = aws_instance.frontend
+
+  target_group_arn = aws_lb_target_group.result.arn
+  target_id        = each.value.id
+  port             = var.result_outside_port
+}
+
+# Allocate an Elastic IP for the NAT Gateway
+resource "aws_eip" "nat" {
+  for_each = {
+    a = {}
+    c = {}
+  }
+  domain = "vpc"
+  tags = {
+    Name = "project1-${var.student_name}-nat-eip-${each.key}"
+  }
+}
+
+# Create the NAT Gateway
+resource "aws_nat_gateway" "nat" {
+  for_each = {
+    a = "a"
+    c = "c"
+  }
+  allocation_id = aws_eip.nat[each.key].id
+  subnet_id = aws_subnet.subnets[each.value].id
+  depends_on = [
+    aws_internet_gateway.igw
+  ]
+
+  tags = {
+    Name = "project1-${var.student_name}-nat-${each.key}"
+  }
+}
+
+# Create one private route table per AZ
+resource "aws_route_table" "private" {
+  for_each = {
+    b = "a"
+    d = "c"
+  }
+  vpc_id = aws_vpc.main.id
+  route {
+    cidr_block = var.allowed_cidr_ipv4_public
+    nat_gateway_id = aws_nat_gateway.nat[each.value].id
+  }
+  tags = {
+    Name = "project1-${var.student_name}-private-${each.key}"
+  }
+}
+
+# Associate each private subnet with its own route table
+resource "aws_route_table_association" "private" {
+  for_each = {
+    b = "b"
+    d = "d"
+  }
+  subnet_id = aws_subnet.subnets[each.key].id
+  route_table_id = aws_route_table.private[each.key].id
+}
+
+# Create one instance in both AZs for Middleware
+resource "aws_instance" "middleware" {
+  for_each = {
+    for key, subnet in local.subnets : key => subnet
+    if !subnet.public
+  }
+
+  ami           = data.aws_ami.al2023.id
+  instance_type = var.instance_type
+  subnet_id     = aws_subnet.subnets[each.key].id
+  key_name      = aws_key_pair.my_key.key_name
+
+  associate_public_ip_address = false
+
+  vpc_security_group_ids = [
+    aws_security_group.middleware.id
+  ]
+
+#  user_data = file("worker-userdata.sh")
+
+  tags = {
+    Name = "project1-${var.student_name}-middleware-${each.key}"
+    Role = "Worker + Redis"
+  }
+}
+
+# PostgreSQL Primary
+resource "aws_instance" "postgres_primary" {
+  ami           = data.aws_ami.al2023.id
+  instance_type = var.instance_type
+
+  subnet_id = aws_subnet.subnets["b"].id
+
+  key_name = aws_key_pair.my_key.key_name
+
+  associate_public_ip_address = false
+
+  vpc_security_group_ids = [
+    aws_security_group.database.id
+  ]
+
+#  user_data = file("postgres-primary.sh")
+
+  tags = {
+    Name = "project1-${var.student_name}-postgres-primary"
+    Role = "Primary"
+  }
+}
+
+# PostgreSQL Standby
+resource "aws_instance" "postgres_replica" {
+  ami           = data.aws_ami.al2023.id
+  instance_type = var.instance_type
+
+  subnet_id = aws_subnet.subnets["d"].id
+
+  key_name = aws_key_pair.my_key.key_name
+
+  associate_public_ip_address = false
+
+  vpc_security_group_ids = [
+    aws_security_group.database.id
+  ]
+
+#  user_data = file("postgres-standby.sh")
+
+  tags = {
+    Name = "project1-${var.student_name}-postgres-standby"
+    Role = "Replica"
+  }
+}
+
+# Generates a secure private key
+resource "tls_private_key" "key_pair" {
+  algorithm = var.private_key_algorithm
+}
+
+# Registers the public key with AWS
+resource "aws_key_pair" "my_key" {
+  key_name   = "${var.student_name}-project1-ssh-key"
+  public_key = tls_private_key.key_pair.public_key_openssh
+}
+
+# Saves the private key locally as a .pem file
+resource "local_file" "private_key" {
+  content         = tls_private_key.key_pair.private_key_openssh
+  filename        = "${path.root}/ansible/${var.student_name}-project1-ssh-key.pem"
+  file_permission = "0400" 
+}
+
+# Create a private hosted zone
+resource "aws_route53_zone" "private" {
+  name = var.private_route53_zone_name
+
+  vpc {
+    vpc_id = aws_vpc.main.id
+  }
+
+  tags = {
+    Name = "project-internal"
+  }
+}
+
+locals {
+  postgres_writer_fqdn  = "${var.postgres_writer_record_name}.${var.private_route53_zone_name}"
+}
+
+resource "aws_route53_record" "postgres_writer" {
+  zone_id = aws_route53_zone.private.zone_id
+
+  name    = local.postgres_writer_fqdn
+  type    = "A"
+  ttl     = var.route53_record_ttl
+
+  records = [
+    aws_instance.postgres_primary.private_ip
+  ]
+  # Ansible will update this record during failover/failback.
+  # Terraform should not immediately revert it during a later terraform apply.
+  lifecycle {
+    ignore_changes = [
+      records
+    ]
+  }
+}
+
+# Generate SSH-Config
+resource "local_file" "ssh_config" {
+  filename = "${path.root}/ansible/ssh_config"
+
+  content = <<EOF
+Host *
+    User ec2-user
+    IdentityFile ./${var.student_name}-project1-ssh-key.pem
+    IdentitiesOnly yes
+    StrictHostKeyChecking no
+    UserKnownHostsFile /dev/null
+
+Host bastion-${local.topology.az1.bastion}
+    HostName ${aws_instance.bastion[local.topology.az1.bastion].public_ip}
+
+Host bastion-${local.topology.az2.bastion}
+    HostName ${aws_instance.bastion[local.topology.az2.bastion].public_ip}
+
+Host frontend-${local.topology.az1.frontend}
+    HostName ${aws_instance.frontend[local.topology.az1.frontend].private_ip}
+    ProxyJump bastion-${local.topology.az1.bastion}
+
+Host frontend-${local.topology.az2.frontend}
+    HostName ${aws_instance.frontend[local.topology.az2.frontend].private_ip}
+    ProxyJump bastion-${local.topology.az2.bastion}
+
+Host middleware-${local.topology.az1.middleware}
+    HostName ${aws_instance.middleware[local.topology.az1.middleware].private_ip}
+    ProxyJump bastion-${local.topology.az1.bastion}
+
+Host middleware-${local.topology.az2.middleware}
+    HostName ${aws_instance.middleware[local.topology.az2.middleware].private_ip}
+    ProxyJump bastion-${local.topology.az2.bastion}
+
+Host db-1 postgres-primary
+    HostName ${aws_instance.postgres_primary.private_ip}
+    ProxyJump bastion-${local.topology.az1.bastion}
+
+Host db-2 postgres-standby
+    HostName ${aws_instance.postgres_replica.private_ip}
+    ProxyJump bastion-${local.topology.az2.bastion}
+EOF
+}
+
+resource "local_file" "ansible_inventory" {
+  filename = "${path.root}/ansible/inventory.ini"
+
+  content = <<EOF
+[all:vars]
+route53_zone_name=${var.private_route53_zone_name}
+route53_zone_id=${aws_route53_zone.private.zone_id}
+postgres_writer_fqdn=${local.postgres_writer_fqdn}
+db1_private_ip=${aws_instance.postgres_primary.private_ip}
+db2_private_ip=${aws_instance.postgres_replica.private_ip}
+
+[bastion]
+bastion-${local.topology.az1.bastion} az=az1
+bastion-${local.topology.az2.bastion} az=az2
+
+[frontend]
+frontend-${local.topology.az1.frontend} az=az1 private_ip=${aws_instance.frontend[local.topology.az1.frontend].private_ip} private_dns=${aws_instance.frontend[local.topology.az1.frontend].private_dns} redis_host_ip=${aws_instance.middleware[local.topology.az1.middleware].private_ip}
+frontend-${local.topology.az2.frontend} az=az2 private_ip=${aws_instance.frontend[local.topology.az2.frontend].private_ip} private_dns=${aws_instance.frontend[local.topology.az2.frontend].private_dns} redis_host_ip=${aws_instance.middleware[local.topology.az2.middleware].private_ip}
+
+[middleware]
+middleware-${local.topology.az1.middleware} az=az1 private_ip=${aws_instance.middleware[local.topology.az1.middleware].private_ip} private_dns=${aws_instance.middleware[local.topology.az1.middleware].private_dns} postgres_primary_host=${local.postgres_writer_fqdn}
+middleware-${local.topology.az2.middleware} az=az2 private_ip=${aws_instance.middleware[local.topology.az2.middleware].private_ip} private_dns=${aws_instance.middleware[local.topology.az2.middleware].private_dns} postgres_primary_host=${local.postgres_writer_fqdn}
+
+[postgres_primary]
+db-1 az=az1 private_ip=${aws_instance.postgres_primary.private_ip} private_dns=${aws_instance.postgres_primary.private_dns} postgres_role=primary
+
+[postgres_standby]
+db-2 az=az2 private_ip=${aws_instance.postgres_replica.private_ip} private_dns=${aws_instance.postgres_replica.private_dns} postgres_role=standby postgres_primary_ip=${aws_instance.postgres_primary.private_ip}
+
+[postgres:children]
+postgres_primary
+postgres_standby
+
+[docker_hosts:children]
+frontend
+middleware
+postgres
+EOF
+}

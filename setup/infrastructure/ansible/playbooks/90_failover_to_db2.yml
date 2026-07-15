@@ -1,0 +1,53 @@
+---
+- name: Stop workers before PostgreSQL failover
+  hosts: middleware
+  become: true
+  tasks:
+    - name: Stop worker container
+      ansible.builtin.shell: |
+        docker stop worker || true
+      changed_when: true
+
+- name: Promote db-2 standby to primary
+  hosts: postgres_standby
+  become: true
+  tasks:
+    - name: Check whether db-2 is in recovery
+      ansible.builtin.shell: |
+        docker exec postgres psql -U {{ postgres_user }} -d {{ postgres_db }} -tAc "SELECT pg_is_in_recovery();"
+      register: db2_recovery_state
+      changed_when: false
+
+    - name: Promote db-2
+      ansible.builtin.shell: |
+        docker exec postgres psql -U {{ postgres_user }} -d {{ postgres_db }} -c "SELECT pg_promote();"
+      when: db2_recovery_state.stdout | trim == "t"
+      changed_when: true
+
+    - name: Wait until db-2 is primary
+      ansible.builtin.shell: |
+        docker exec postgres psql -U {{ postgres_user }} -d {{ postgres_db }} -tAc "SELECT pg_is_in_recovery();"
+      register: db2_after_promote
+      retries: 20
+      delay: 3
+      until: db2_after_promote.stdout | trim == "f"
+      changed_when: false
+
+- name: Update Route 53 writer to db-2
+  hosts: localhost
+  gather_facts: false
+  vars:
+    route53_target_ip: "{{ db2_private_ip }}"
+  tasks:
+    - name: Update writer DNS to promoted db-2
+      ansible.builtin.import_tasks: tasks/update_route53_writer.yml
+
+- name: Restart application containers after failover
+  hosts: middleware:frontend
+  become: true
+  tasks:
+    - name: Restart worker and result containers if present
+      ansible.builtin.shell: |
+        docker restart worker 2>/dev/null || true
+        docker restart result 2>/dev/null || true
+      changed_when: true

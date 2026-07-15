@@ -1,0 +1,33 @@
+---
+- name: Install and start Docker on all Docker hosts
+  hosts: docker_hosts
+  become: true
+
+  tasks:
+    - name: Ensure Python 3 is installed
+      ansible.builtin.dnf:
+        name: python3
+        state: present
+        lock_timeout: 120
+
+    - name: Ensure Docker is installed
+      ansible.builtin.dnf:
+        name: docker
+        state: present
+        lock_timeout: 120
+
+    - name: Ensure Docker service is enabled and running
+      ansible.builtin.service:
+        name: docker
+        state: started
+        enabled: true
+
+    - name: Add ec2-user to docker group
+      ansible.builtin.user:
+        name: ec2-user
+        groups: docker
+        append: true
+
+    - name: Verify Docker version
+      ansible.builtin.command: docker --version
+      changed_when: false

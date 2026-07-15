@@ -1,0 +1,2 @@
+---
+postgres_primary_host: "{{ postgres_writer_fqdn }}"
