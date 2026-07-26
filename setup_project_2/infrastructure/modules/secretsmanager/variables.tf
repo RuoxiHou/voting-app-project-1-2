@@ -13,3 +13,13 @@ variable "db_username" {
 variable "db_name" {
   type = string
 }
+
+variable "rds_endpoint" {
+  description = "RDS endpoint"
+  type        = string
+}
+
+variable "rds_port" {
+  description = "RDS port"
+  type        = number
+}

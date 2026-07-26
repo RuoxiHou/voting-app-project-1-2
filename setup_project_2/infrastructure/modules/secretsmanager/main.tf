@@ -21,6 +21,8 @@ resource "aws_secretsmanager_secret_version" "postgres" {
   secret_id = aws_secretsmanager_secret.postgres.id
 
   secret_string = jsonencode({
+    host     = var.rds_endpoint
+    port     = var.rds_port
     username = var.db_username
     password = random_password.db_password.result
     database = var.db_name

@@ -39,6 +39,9 @@ module "secretsmanager" {
 
   db_username = var.db_username
   db_name     = var.db_name
+
+  rds_endpoint = module.rds.rds_endpoint
+  rds_port = module.rds.rds_port
 }
 
 module "rds" {

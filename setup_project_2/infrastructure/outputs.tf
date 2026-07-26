@@ -63,6 +63,9 @@ output "db_secret_arn" {
   value = module.secretsmanager.db_secret_arn
 }
 
+output "db_secret_name" {
+  value = module.secretsmanager.db_secret_name
+}
 # Route53
 ########################################
 output "public_zone_arn" {
