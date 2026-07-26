@@ -25,3 +25,7 @@ output "keda_release" {
 output "gateway_name" {
   value = module.gateway.gateway_name
 }
+
+output "gateway_namespace" {
+  value = module.gateway.gateway_namespace
+}
