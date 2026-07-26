@@ -50,3 +50,18 @@ variable "metrics_server_chart_version" {
   description = "Helm chart version for Metrics Server"
   default     = "3.13.0"
 }
+
+variable "gateway_name" {
+  type    = string
+  default = "public-gateway"
+}
+
+variable "gateway_namespace" {
+  type    = string
+  default = "voting-app"
+}
+
+variable "gateway_class_name" {
+  type    = string
+  default = "alb"
+}

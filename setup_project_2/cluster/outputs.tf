@@ -21,3 +21,7 @@ output "cluster_autoscaler_release" {
 output "keda_release" {
   value = module.keda.release_name
 }
+
+output "gateway_name" {
+  value = module.gateway.gateway_name
+}

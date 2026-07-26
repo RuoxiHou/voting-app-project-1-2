@@ -97,3 +97,15 @@ module "cert_manager" {
     module.external_dns
   ]
 }
+
+module "gateway" {
+  source = "./modules/gateway"
+
+  gateway_name       = var.gateway_name
+  gateway_namespace  = var.gateway_namespace
+  gateway_class_name = var.gateway_class_name
+
+  depends_on = [
+    module.aws_load_balancer_controller
+  ]
+}
