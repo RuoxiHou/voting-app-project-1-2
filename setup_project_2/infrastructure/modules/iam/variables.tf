@@ -15,6 +15,6 @@ variable "oidc_provider_url" {
 }
 
 variable "public_zone_arn" {
-  type = string
+  type    = string
   default = null
 }

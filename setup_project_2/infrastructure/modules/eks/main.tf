@@ -76,7 +76,7 @@ resource "aws_iam_role_policy_attachment" "node_worker_policy" {
 resource "aws_iam_role_policy_attachment" "node_cni_policy" {
   role       = aws_iam_role.node.name
   policy_arn = "arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy"
-} 
+}
 
 resource "aws_iam_role_policy_attachment" "node_registry_policy" {
   role       = aws_iam_role.node.name
@@ -111,6 +111,9 @@ resource "aws_eks_node_group" "default" {
 
   tags = {
     Name = "${local.name_prefix}-default-ng"
+
+    "k8s.io/cluster-autoscaler/enabled"                         = "true"
+    "k8s.io/cluster-autoscaler/${aws_eks_cluster.cluster.name}" = "owned"
   }
 }
 

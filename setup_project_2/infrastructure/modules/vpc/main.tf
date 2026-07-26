@@ -81,10 +81,10 @@ resource "aws_subnet" "public" {
   map_public_ip_on_launch = true
 
   tags = {
-    Name = "${local.name_prefix}-${each.key}"
-    Purpose = "alb"
+    Name                                            = "${local.name_prefix}-${each.key}"
+    Purpose                                         = "alb"
     "kubernetes.io/cluster/${var.eks_cluster_name}" = "shared" # Terraform owns this subnet. EKS may use it. 
-    "kubernetes.io/role/elb"                        = "1" # This is a PUBLIC subnet and internet-facing load balancers may be created here.
+    "kubernetes.io/role/elb"                        = "1"      # This is a PUBLIC subnet and internet-facing load balancers may be created here.
   }
 }
 
@@ -99,8 +99,8 @@ resource "aws_subnet" "private_eks" {
   map_public_ip_on_launch = false
 
   tags = {
-    Name = "${local.name_prefix}-${each.key}"
-    Purpose = "eks"
+    Name                                            = "${local.name_prefix}-${each.key}"
+    Purpose                                         = "eks"
     "kubernetes.io/cluster/${var.eks_cluster_name}" = "shared"
     "kubernetes.io/role/internal-elb"               = "1" # This is a PRIVATE subnet and internal load balancers may be created here.
   }
@@ -118,7 +118,7 @@ resource "aws_subnet" "private_rds" {
   map_public_ip_on_launch = false
 
   tags = {
-    Name = "${local.name_prefix}-${each.key}"
+    Name    = "${local.name_prefix}-${each.key}"
     Purpose = "rds"
   }
 }

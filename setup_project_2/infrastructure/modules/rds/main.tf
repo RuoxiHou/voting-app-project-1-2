@@ -56,16 +56,6 @@ resource "aws_db_parameter_group" "postgres" {
     create_before_destroy = true
   } # This helps prevent issues during major version upgrades where a parameter group family changes.
 
-  parameter {
-    name  = "log_connections"
-    value = "1"
-  } # Logs every successful client connection.
-
-  parameter {
-    name  = "log_disconnections"
-    value = "1"
-  } # Logs every client disconnect.
-
   tags = {
     Name = "${local.name_prefix}-postgres-params"
   }
@@ -108,13 +98,13 @@ resource "aws_db_instance" "postgres" {
   auto_minor_version_upgrade = true
 
   deletion_protection = false # For production, it should be true as I need to delete the cluster afterwards.
-  skip_final_snapshot = true # For production, it should be false as I need to delete the cluster afterwards.
+  skip_final_snapshot = true  # For production, it should be false as I need to delete the cluster afterwards.
 
   apply_immediately = true
 
   enabled_cloudwatch_logs_exports = [
     "postgresql"
-  ] # Allow the Connection logs, Query logs, Startup events and Failover events to be seen in CloudWatch
+  ] # Allow the Connection logs, Query logs, Startup events and Failover events to be seen in Cloudwatch
 
   tags = {
     Name = "${local.name_prefix}-postgres"

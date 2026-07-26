@@ -452,6 +452,7 @@ resource "aws_iam_policy" "cert_manager" {
         Effect = "Allow"
 
         Action = [
+          "route53:ListHostedZones",
           "route53:ListHostedZonesByName"
         ]
 
@@ -621,8 +622,7 @@ resource "aws_iam_role" "cluster_autoscaler" {
       Condition = {
         StringEquals = {
           "${local.oidc_provider_url_without_https}:aud" = "sts.amazonaws.com"
-          "${local.oidc_provider_url_without_https}:sub" =
-          "system:serviceaccount:kube-system:cluster-autoscaler"
+          "${local.oidc_provider_url_without_https}:sub" = "system:serviceaccount:kube-system:cluster-autoscaler"
         }
       }
     }]

@@ -1,7 +1,7 @@
 variable "aws_region" {
   description = "AWS region"
   type        = string
-  default     = "eu-west-2"
+  default     = "us-west-2"
 }
 
 variable "student_name" {
@@ -45,16 +45,28 @@ variable "private_subnet_b" {
   default     = "10.0.12.0/24"
 }
 
+variable "private_subnet_c" {
+  description = "Private RDS subnet CIDR in AZ 1"
+  type        = string
+  default     = "10.0.13.0/24"
+}
+
+variable "private_subnet_d" {
+  description = "Private RDS subnet CIDR in AZ 2"
+  type        = string
+  default     = "10.0.14.0/24"
+}
+
 variable "az_1" {
   description = "First availability zone"
   type        = string
-  default     = "eu-west-2a"
+  default     = "us-west-2a"
 }
 
 variable "az_2" {
   description = "Second availability zone"
   type        = string
-  default     = "eu-west-2b"
+  default     = "us-west-2b"
 }
 
 variable "eks_cluster_name" {
@@ -139,4 +151,9 @@ variable "domain_name" {
   description = "Public DNS domain name, for example example.com"
   type        = string
   default     = ""
+}
+
+variable "hosted_zone_id" {
+  description = "Existing Route53 Hosted Zone ID"
+  type        = string
 }

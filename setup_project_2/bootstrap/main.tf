@@ -1,7 +1,12 @@
 # Create the S3 bucket for Terraform state
-resource "aws_s3_bucket" "tfstate" {
-  bucket = var.bucket_name
+resource "random_string" "suffix" {
+  length  = 6
+  special = false
+  upper   = false
+}
 
+resource "aws_s3_bucket" "tfstate" {
+  bucket = "${var.project_name}-${var.student_name}-tfstate-${random_string.suffix.result}"
   tags = {
     Name        = "Terraform State Bucket"
     Environment = var.environment

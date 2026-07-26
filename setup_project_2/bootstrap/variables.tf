@@ -1,11 +1,20 @@
-variable "bucket_name" {
-    description = "S3 bucket that stores the tfstate and lock table"
-    type = string
-    default = "tfstate-bucket-test-ruoxi"
-}
-
 variable "environment" {
   description = "Deployment environment"
   type        = string
   default     = "prod"
+}
+
+variable "aws_region" {
+  type = string
+  default = "us-west-2"
+}
+
+variable "student_name" {
+  type = string
+  default = "ruoxi"
+}
+
+variable "project_name" {
+  type = string
+  default = "project2"
 }

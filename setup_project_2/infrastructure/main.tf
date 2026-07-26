@@ -1,28 +1,28 @@
 module "vpc" {
   source = "./modules/vpc"
 
-  student_name       = var.student_name
-  project_name       = var.project_name
-  vpc_cidr_block     = var.vpc_cidr_block
-  public_subnet_a    = var.public_subnet_a
-  public_subnet_b    = var.public_subnet_b
-  private_subnet_a   = var.private_subnet_a
-  private_subnet_b   = var.private_subnet_b
-  private_subnet_c   = var.private_subnet_c
-  private_subnet_d   = var.private_subnet_d
-  az_1               = var.az_1
-  az_2               = var.az_2
-  eks_cluster_name   = var.eks_cluster_name
+  student_name     = var.student_name
+  project_name     = var.project_name
+  vpc_cidr_block   = var.vpc_cidr_block
+  public_subnet_a  = var.public_subnet_a
+  public_subnet_b  = var.public_subnet_b
+  private_subnet_a = var.private_subnet_a
+  private_subnet_b = var.private_subnet_b
+  private_subnet_c = var.private_subnet_c
+  private_subnet_d = var.private_subnet_d
+  az_1             = var.az_1
+  az_2             = var.az_2
+  eks_cluster_name = var.eks_cluster_name
 }
 
 module "eks" {
   source = "./modules/eks"
 
-  student_name       = var.student_name
-  project_name       = var.project_name
-  eks_cluster_name   = var.eks_cluster_name
-  eks_version        = var.eks_version
-  vpc_id             = module.vpc.vpc_id
+  student_name           = var.student_name
+  project_name           = var.project_name
+  eks_cluster_name       = var.eks_cluster_name
+  eks_version            = var.eks_version
+  vpc_id                 = module.vpc.vpc_id
   private_eks_subnet_ids = module.vpc.private_eks_subnet_ids
 
   node_instance_types = var.node_instance_types
@@ -44,11 +44,11 @@ module "secretsmanager" {
 module "rds" {
   source = "./modules/rds"
 
-  student_name       = var.student_name
-  project_name       = var.project_name
-  vpc_id             = module.vpc.vpc_id
-  vpc_cidr_block     = var.vpc_cidr_block
-  private_rds_subnet_ids = module.vpc.private_rds_subnet_ids
+  student_name               = var.student_name
+  project_name               = var.project_name
+  vpc_id                     = module.vpc.vpc_id
+  vpc_cidr_block             = var.vpc_cidr_block
+  private_rds_subnet_ids     = module.vpc.private_rds_subnet_ids
   eks_node_security_group_id = module.eks.node_security_group_id
 
   db_identifier = var.db_identifier

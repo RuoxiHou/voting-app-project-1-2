@@ -1,0 +1,30 @@
+  cluster:
+    runs-on: ubuntu-latest
+
+    needs:
+      - bootstrap
+      - infrastructure
+
+    defaults:
+      run:
+        working-directory: cluster
+
+    steps:
+
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+
+      - name: Configure AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: eu-west-2
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+
+      - name: Terraform Init
+        run: |
+          terraform init \
+            -backend-config="bucket=${{ needs.bootstrap.outputs.tfstate_bucket }}"
+
+      - name: Terraform Apply
+        run: terraform apply -auto-approve
