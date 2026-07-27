@@ -33,12 +33,12 @@ spec:
 
           resources:
             requests:
-              cpu: 100m
-              memory: 128Mi
+              cpu: {{ .Values.resources.requests.cpu }}
+              memory: {{ .Values.resources.requests.memory }}
 
             limits:
-              cpu: 500m
-              memory: 512Mi
+              cpu: {{ .Values.resources.limits.cpu }}
+              memory: {{ .Values.resources.limits.memory }}
 
       topologySpreadConstraints:
         - maxSkew: 1
@@ -47,11 +47,3 @@ spec:
           labelSelector:
             matchLabels:
               app: worker
-
-      affinity:
-        podAntiAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-            - labelSelector:
-                matchLabels:
-                  app: worker
-              topologyKey: kubernetes.io/hostname

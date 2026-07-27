@@ -1,6 +1,6 @@
 resource "kubernetes_namespace_v1" "cert_manager" {
   metadata {
-    name = "cert-manager"
+    name = var.namespace
   }
 }
 
@@ -20,7 +20,7 @@ resource "kubernetes_service_account_v1" "cert_manager" {
 
 resource "helm_release" "cert_manager" {
   name             = "cert-manager"
-  namespace        = "cert-manager"
+  namespace        = var.namespace
   create_namespace = true
 
   repository = "https://charts.jetstack.io"
@@ -42,11 +42,11 @@ resource "helm_release" "cert_manager" {
     },
     {
         name  = "replicaCount"
-        value = "2"
+        value = tostring(var.replica_count)
     }
   ]
 
-  timeout = 600
+  timeout = var.helm_timeout
 
   depends_on = [
     kubernetes_service_account_v1.cert_manager

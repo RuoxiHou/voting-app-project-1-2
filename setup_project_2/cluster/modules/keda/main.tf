@@ -1,6 +1,6 @@
 resource "helm_release" "keda" {
   name             = "keda"
-  namespace        = "keda"
+  namespace        = var.namespace
   create_namespace = true
 
   repository = "https://kedacore.github.io/charts"
@@ -11,9 +11,9 @@ resource "helm_release" "keda" {
   set = [
     {
       name  = "operator.replicaCount"
-      value = "2"
+      value = tostring(var.replica_count)
     }
   ]
   
-  timeout = 600
+  timeout = var.helm_timeout
 }

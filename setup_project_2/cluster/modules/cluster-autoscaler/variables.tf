@@ -18,3 +18,15 @@ variable "cluster_autoscaler_chart_version" {
   description = "Helm chart version for Cluster Autoscaler"
   default     = "9.59.0"
 }
+
+variable "namespace" {
+  type        = string
+  description = "Namespace to install Cluster Autoscaler into"
+  default     = "kube-system"
+}
+
+variable "helm_timeout" {
+  type        = number
+  description = "Timeout (seconds) for the helm_release to become ready"
+  default     = 600
+}

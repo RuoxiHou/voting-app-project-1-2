@@ -25,3 +25,11 @@ output "oidc_provider_url" {
 output "node_security_group_id" {
   value = aws_security_group.nodes.id
 }
+
+# Managed node groups (with no custom launch template) use the security group
+# that EKS creates automatically for the cluster, not aws_security_group.nodes
+# above. Other modules (e.g. RDS) that need to allow traffic from the worker
+# nodes must reference this security group instead.
+output "cluster_security_group_id" {
+  value = aws_eks_cluster.cluster.vpc_config[0].cluster_security_group_id
+}

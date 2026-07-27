@@ -23,9 +23,11 @@ output "keda_release" {
 }
 
 output "gateway_name" {
-  value = module.gateway.gateway_name
+  # NOTE: sourced directly from the variable since the "gateway" module is
+  # currently disabled (see main.tf) - not from a module output.
+  value = var.gateway_name
 }
 
 output "gateway_namespace" {
-  value = module.gateway.gateway_namespace
+  value = var.gateway_namespace
 }

@@ -23,5 +23,5 @@ spec:
               service:
                 name: vote-service
                 port:
-                  number: 80
+                  number: {{ .Values.vote.port }}
 {{- end }}

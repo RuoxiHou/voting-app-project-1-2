@@ -1,7 +1,7 @@
 resource "kubernetes_service_account_v1" "external_dns" {
   metadata {
     name      = "external-dns"
-    namespace = "kube-system"
+    namespace = var.namespace
 
     annotations = {
       "eks.amazonaws.com/role-arn" = var.external_dns_role_arn
@@ -15,7 +15,7 @@ resource "kubernetes_service_account_v1" "external_dns" {
 
 resource "helm_release" "external_dns" {
   name      = "external-dns"
-  namespace = "kube-system"
+  namespace = var.namespace
 
   repository = "https://kubernetes-sigs.github.io/external-dns/"
   chart      = "external-dns"
@@ -68,7 +68,7 @@ resource "helm_release" "external_dns" {
     }
   ]
 
-  timeout = 600
+  timeout = var.helm_timeout
 
   depends_on = [
     kubernetes_service_account_v1.external_dns

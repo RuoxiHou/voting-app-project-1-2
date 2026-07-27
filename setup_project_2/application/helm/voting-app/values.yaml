@@ -1,8 +1,18 @@
 namespace: voting-app
 
+# Shared defaults applied to the vote/result/worker/redis containers.
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
 vote:
   replicaCount: 2
   image: ${student_name}/voting-app:latest
+  port: 80
 
 worker:
   replicaCount: 2
@@ -11,16 +21,19 @@ worker:
 result:
   replicaCount: 2
   image: ${student_name}/result-app:latest
+  port: 80
 
 redis:
   replicaCount: 1
-  image: redis:7-alpine
+  image: redis:8-alpine
   serviceName: redis
   port: 6379
 
 database:
   secretName: "voting-db"
-  awsSecretName: "project2-ruoxihou/rds/postgres"
+  # Always supplied by Terraform (application/main.tf) from the
+  # infrastructure module's db_secret_name output.
+  awsSecretName: ""
 
 gateway:
   name: ""

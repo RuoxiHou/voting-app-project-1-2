@@ -1,6 +1,6 @@
 resource "helm_release" "external_secrets" {
   name             = "external-secrets"
-  namespace        = "external-secrets"
+  namespace        = var.namespace
   create_namespace = true
 
   repository = "https://charts.external-secrets.io"
@@ -21,7 +21,7 @@ resource "helm_release" "external_secrets" {
     }
   ]
 
-  timeout = 600
+  timeout = var.helm_timeout
 }
 
 # This installs External Secrets Operator, which runs inside Kubernetes and syncs secrets from AWS Secrets Manager into Kubernetes Secret objects. 

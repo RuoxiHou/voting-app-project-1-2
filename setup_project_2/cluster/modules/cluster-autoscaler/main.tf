@@ -1,7 +1,7 @@
 resource "kubernetes_service_account_v1" "cluster_autoscaler" {
   metadata {
     name      = "cluster-autoscaler"
-    namespace = "kube-system"
+    namespace = var.namespace
 
     annotations = {
       "eks.amazonaws.com/role-arn" = var.cluster_autoscaler_role_arn
@@ -15,7 +15,7 @@ resource "kubernetes_service_account_v1" "cluster_autoscaler" {
 
 resource "helm_release" "cluster_autoscaler" {
   name      = "cluster-autoscaler"
-  namespace = "kube-system"
+  namespace = var.namespace
 
   repository = "https://kubernetes.github.io/autoscaler"
   chart      = "cluster-autoscaler"
@@ -61,7 +61,7 @@ resource "helm_release" "cluster_autoscaler" {
     }
   ]
 
-  timeout = 600
+  timeout = var.helm_timeout
 
   depends_on = [
     kubernetes_service_account_v1.cluster_autoscaler

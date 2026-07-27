@@ -1,12 +1,12 @@
 resource "helm_release" "metrics_server" {
   name             = "metrics-server"
-  namespace        = "kube-system"
+  namespace        = var.namespace
   create_namespace = false
 
   repository = "https://kubernetes-sigs.github.io/metrics-server"
   chart      = "metrics-server"
 
-  timeout = 600
+  timeout = var.helm_timeout
 
   set = [
     {

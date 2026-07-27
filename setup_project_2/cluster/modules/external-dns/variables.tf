@@ -23,3 +23,15 @@ variable "external_dns_chart_version" {
   description = "Helm chart version for ExternalDNS"
   default     = "1.18.0"
 }
+
+variable "namespace" {
+  type        = string
+  description = "Namespace to install ExternalDNS into"
+  default     = "kube-system"
+}
+
+variable "helm_timeout" {
+  type        = number
+  description = "Timeout (seconds) for the helm_release to become ready"
+  default     = 600
+}

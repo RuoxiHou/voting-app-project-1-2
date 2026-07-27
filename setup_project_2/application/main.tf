@@ -52,8 +52,8 @@ resource "helm_release" "voting_app" {
       }
 
       database = {
-        secretName = "voting-db"
-        awsSecretName = "project2-ruoxihou/rds/postgres"
+        secretName    = "voting-db"
+        awsSecretName = data.terraform_remote_state.infrastructure.outputs.db_secret_name
       }
     })
   ]

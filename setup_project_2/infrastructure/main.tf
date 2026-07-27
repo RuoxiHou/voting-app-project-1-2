@@ -52,7 +52,7 @@ module "rds" {
   vpc_id                     = module.vpc.vpc_id
   vpc_cidr_block             = var.vpc_cidr_block
   private_rds_subnet_ids     = module.vpc.private_rds_subnet_ids
-  eks_node_security_group_id = module.eks.node_security_group_id
+  eks_node_security_group_id = module.eks.cluster_security_group_id
 
   db_identifier = var.db_identifier
   db_name       = var.db_name

@@ -23,5 +23,5 @@ spec:
               service:
                 name: result-service
                 port:
-                  number: 80
+                  number: {{ .Values.result.port }}
 {{- end }}

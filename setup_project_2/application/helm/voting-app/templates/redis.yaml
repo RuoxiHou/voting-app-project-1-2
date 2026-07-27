@@ -14,8 +14,8 @@ spec:
 
   ports:
     - name: redis
-      port: 6379
-      targetPort: 6379
+      port: {{ .Values.redis.port }}
+      targetPort: {{ .Values.redis.port }}
       protocol: TCP
 
 ---
@@ -48,26 +48,26 @@ spec:
 
           ports:
             - name: redis
-              containerPort: 6379
+              containerPort: {{ .Values.redis.port }}
               protocol: TCP
 
           resources:
             requests:
-              cpu: 100m
-              memory: 128Mi
+              cpu: {{ .Values.resources.requests.cpu }}
+              memory: {{ .Values.resources.requests.memory }}
             limits:
-              cpu: 500m
-              memory: 512Mi
+              cpu: {{ .Values.resources.limits.cpu }}
+              memory: {{ .Values.resources.limits.memory }}
 
           livenessProbe:
             tcpSocket:
-              port: 6379
+              port: {{ .Values.redis.port }}
             initialDelaySeconds: 10
             periodSeconds: 10
 
           readinessProbe:
             tcpSocket:
-              port: 6379
+              port: {{ .Values.redis.port }}
             initialDelaySeconds: 5
             periodSeconds: 5
 

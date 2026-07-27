@@ -3,9 +3,10 @@ locals {
 }
 
 resource "random_password" "db_password" {
-  length           = 24
-  special          = true
-  override_special = "!#$%&*()-_=+[]{}<>:?"
+  length  = 24
+  special = true
+  # Keep only URL-safe special characters. 
+  override_special = "-_.~"
 }
 
 resource "aws_secretsmanager_secret" "postgres" {

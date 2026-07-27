@@ -1,7 +1,7 @@
 resource "kubernetes_service_account_v1" "aws_load_balancer_controller" {
   metadata {
     name      = "aws-load-balancer-controller"
-    namespace = "kube-system"
+    namespace = var.namespace
 
     annotations = {
       "eks.amazonaws.com/role-arn" = var.alb_controller_role_arn
@@ -41,7 +41,7 @@ resource "kubernetes_cluster_role_binding_v1" "aws_load_balancer_controller_secr
 
 resource "helm_release" "aws_load_balancer_controller" {
   name      = "aws-load-balancer-controller"
-  namespace = "kube-system"
+  namespace = var.namespace
 
   repository = "https://aws.github.io/eks-charts"
   chart      = "aws-load-balancer-controller"
@@ -74,7 +74,7 @@ resource "helm_release" "aws_load_balancer_controller" {
     }
   ]
 
-  timeout = 600
+  timeout = var.helm_timeout
 
   depends_on = [
     kubernetes_service_account_v1.aws_load_balancer_controller
