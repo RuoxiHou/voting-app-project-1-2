@@ -1,0 +1,34 @@
+namespace: voting-app
+
+vote:
+  replicaCount: 2
+  image: ${student_name}/voting-app:latest
+
+worker:
+  replicaCount: 2
+  image: ${student_name}/worker-app:latest
+
+result:
+  replicaCount: 2
+  image: ${student_name}/result-app:latest
+
+redis:
+  replicaCount: 1
+  image: redis:7-alpine
+  serviceName: redis
+  port: 6379
+
+database:
+  secretName: "voting-db"
+  awsSecretName: "project2-ruoxihou/rds/postgres"
+
+gateway:
+  name: ""
+  namespace: ""
+
+hosts:
+  vote: ""
+  result: ""
+
+ingress:
+  certificateArn: ""
