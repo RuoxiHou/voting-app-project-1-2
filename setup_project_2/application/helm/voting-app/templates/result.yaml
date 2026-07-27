@@ -86,10 +86,7 @@ spec:
                 secretKeyRef:
                   name: voting-db
                   key: DB_NAME
-            # RDS PostgreSQL requires SSL connections (pg_hba.conf rejects
-            # plaintext), but node-postgres does not enable SSL by default
-            # like Npgsql (used by the worker) does. "no-verify" enables
-            # encryption without validating the RDS CA certificate chain.
+            # RDS PostgreSQL requires SSL connections (pg_hba.conf rejects plaintext), but node-postgres does not enable SSL by default like Npgsql (used by the worker) does. "no-verify" enables encryption without validating the RDS CA certificate chain.
             - name: PGSSLMODE
               value: "no-verify"
 
