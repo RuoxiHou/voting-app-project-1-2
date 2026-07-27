@@ -1,25 +1,95 @@
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt-route53
+spec:
+  acme:
+    server: https://acme-v02.api.letsencrypt.org/directory
+    email: admin@ironlabs.online
+    privateKeySecretRef:
+      name: letsencrypt-route53
+    solvers:
+      - dns01:
+          route53:
+            region: us-west-2
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: voting-app-tls
+  namespace: voting-app
+spec:
+  secretName: voting-app-tls
+  issuerRef:
+    name: letsencrypt-route53
+    kind: ClusterIssuer
+  dnsNames:
+    - vote-ruoxihou.ironlabs.online
+    - result-ruoxihou.ironlabs.online
+---
+apiVersion: gateway.k8s.aws/v1
+kind: LoadBalancerConfiguration
+metadata:
+  name: internet-facing-lbc
+  namespace: voting-app
+spec:
+  scheme: internet-facing
+  ipAddressType: ipv4
+---
 apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:
   name: public-gateway
-  namespace: default
-
+  namespace: voting-app
 spec:
   gatewayClassName: alb
+  infrastructure:
+    parametersRef:
+      group: gateway.k8s.aws
+      kind: LoadBalancerConfiguration
+      name: internet-facing-lbc
 
   listeners:
-    - name: http
+    - name: http-vote
       protocol: HTTP
       port: 80
-
+      hostname: vote-ruoxihou.ironlabs.online
       allowedRoutes:
         namespaces:
           from: All
 
-    - name: https
+    - name: https-vote
       protocol: HTTPS
       port: 443
+      hostname: vote-ruoxihou.ironlabs.online
+      tls:
+        certificateRefs:
+          - name: voting-app-tls
+            kind: Secret
+            group: ""
+            namespace: voting-app
+      allowedRoutes:
+        namespaces:
+          from: All
 
+    - name: http-result
+      protocol: HTTP
+      port: 80
+      hostname: result-ruoxihou.ironlabs.online
+      allowedRoutes:
+        namespaces:
+          from: All
+
+    - name: https-result
+      protocol: HTTPS
+      port: 443
+      hostname: result-ruoxihou.ironlabs.online
+      tls:
+        certificateRefs:
+          - name: voting-app-tls
+            kind: Secret
+            group: ""
+            namespace: voting-app
       allowedRoutes:
         namespaces:
           from: All
