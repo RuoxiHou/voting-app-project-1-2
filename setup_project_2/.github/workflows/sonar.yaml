@@ -1,0 +1,38 @@
+name: SonarQube Analysis
+ 
+on:
+  push:
+    branches: [ "main", "advanced" ]
+  pull_request:
+ 
+jobs:
+  build:
+    runs-on: ubuntu-latest
+ 
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+ 
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+          cache-dependency-path: application/vote/requirements.txt
+ 
+      - name: Install Python dependencies
+        run: pip install -r application/vote/requirements.txt
+
+      - name: Verify Python code
+        run: python -m compileall -q application/vote
+ 
+      - name: Run SonarQube analysis
+        uses: sonarsource/sonarqube-scan-action@v4
+        env:
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        with:
+          args: >
+            -Dsonar.projectKey=${{ secrets.SONAR_PROJECT_KEY }}
+            -Dsonar.sources=application/vote,application/result,application/worker
+            -Dsonar.exclusions=**/node_modules/**,**/obj/**,**/bin/**,**/*.min.js

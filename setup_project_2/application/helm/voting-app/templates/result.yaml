@@ -1,0 +1,124 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: result-service
+  namespace: {{ .Values.namespace }}
+  labels:
+    app: result
+
+spec:
+  type: ClusterIP
+
+  selector:
+    app: result
+
+  ports:
+    - name: http
+      port: {{ .Values.result.port }}
+      targetPort: {{ .Values.result.port }}
+      protocol: TCP
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: result
+  namespace: {{ .Values.namespace }}
+  labels:
+    app: result
+
+spec:
+  replicas: {{ .Values.result.replicaCount }}
+
+  selector:
+    matchLabels:
+      app: result
+
+  template:
+    metadata:
+      labels:
+        app: result
+
+    spec:
+      containers:
+        - name: result
+
+          image: {{ .Values.result.image }}
+          imagePullPolicy: IfNotPresent
+
+          ports:
+            - name: http
+              containerPort: {{ .Values.result.port }}
+              protocol: TCP
+
+          envFrom:
+            - configMapRef:
+                name: voting-app-config
+
+            - secretRef:
+                name: voting-db 
+
+          # The result app (server.js) reads PG_* env var names, while the voting-db secret has DB_* env var names. So we need to map them here.
+          env:
+            - name: PG_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: voting-db
+                  key: DB_HOST
+            - name: PG_PORT
+              valueFrom:
+                secretKeyRef:
+                  name: voting-db
+                  key: DB_PORT
+            - name: PG_USER
+              valueFrom:
+                secretKeyRef:
+                  name: voting-db
+                  key: DB_USERNAME
+            - name: PG_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: voting-db
+                  key: DB_PASSWORD
+            - name: PG_DATABASE
+              valueFrom:
+                secretKeyRef:
+                  name: voting-db
+                  key: DB_NAME
+            # RDS PostgreSQL requires SSL connections (pg_hba.conf rejects plaintext), but node-postgres does not enable SSL by default like Npgsql (used by the worker) does. "no-verify" enables encryption without validating the RDS CA certificate chain.
+            - name: PGSSLMODE
+              value: "no-verify"
+
+          resources:
+            requests:
+              cpu: {{ .Values.resources.requests.cpu }}
+              memory: {{ .Values.resources.requests.memory }}
+
+            limits:
+              cpu: {{ .Values.resources.limits.cpu }}
+              memory: {{ .Values.resources.limits.memory }}
+
+          readinessProbe:
+            httpGet:
+              path: /
+              port: {{ .Values.result.port }}
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+
+          livenessProbe:
+            httpGet:
+              path: /
+              port: {{ .Values.result.port }}
+            initialDelaySeconds: 30
+            periodSeconds: 20
+            timeoutSeconds: 5
+
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: topology.kubernetes.io/zone
+          whenUnsatisfiable: DoNotSchedule
+          labelSelector:
+            matchLabels:
+              app: result

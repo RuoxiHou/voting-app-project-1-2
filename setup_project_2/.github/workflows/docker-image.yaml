@@ -1,0 +1,47 @@
+name: CI Pipeline for Docker Images
+ 
+on:
+  push:
+    branches: [ "advanced" ]
+  pull_request:
+    branches: [ "main" ]
+ 
+jobs:
+  sonarqube-scan:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # SonarQube needs full git history for blame/new-code analysis
+
+      - name: SonarQube Scan
+        continue-on-error: true
+        uses: sonarsource/sonarqube-scan-action@v4
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+
+  build-test-and-docker:
+    runs-on: ubuntu-latest
+ 
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Log in to Docker Hub
+        run: echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
+ 
+      - name: Build Docker images
+        run: |
+          docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/voting-app:latest ./application/vote
+          docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/worker-app:latest ./application/worker
+          docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/result-app:latest ./application/result
+ 
+      - name: Push Docker images
+        if: github.event_name == 'push'
+        run: |
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/voting-app:latest
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/worker-app:latest
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/result-app:latest
