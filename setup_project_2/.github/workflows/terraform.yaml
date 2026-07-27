@@ -1,0 +1,141 @@
+name: Terraform Infrastructure Pipeline
+
+on:
+  push:
+    branches: [ "main", "advanced" ]
+  workflow_dispatch: {}
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+
+  bootstrap:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: bootstrap
+
+    outputs:
+      tfstate_bucket: ${{ steps.outputs.outputs.tfstate_bucket }}
+
+    steps:
+
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+
+      - name: Configure AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: us-west-2
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+
+      - name: Terraform Init
+        run: terraform init
+
+      - name: Terraform Apply
+        run: terraform apply -auto-approve
+
+      - name: Get Outputs
+        id: outputs
+        run: |
+          echo "tfstate_bucket=$(terraform output -raw tfstate_bucket_name)" >> $GITHUB_OUTPUT
+
+  infrastructure:
+    runs-on: ubuntu-latest
+
+    needs:
+      - bootstrap
+
+    defaults:
+      run:
+        working-directory: infrastructure
+
+    steps:
+
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+
+      - name: Configure AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: us-west-2
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+
+      - name: Terraform Init
+        run: |
+          terraform init \
+            -backend-config="bucket=${{ needs.bootstrap.outputs.tfstate_bucket }}"
+
+      - name: Terraform Apply
+        run: terraform apply -auto-approve
+
+  cluster:
+    runs-on: ubuntu-latest
+
+    needs:
+      - bootstrap
+      - infrastructure
+
+    defaults:
+      run:
+        working-directory: cluster
+
+    steps:
+
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+
+      - name: Configure AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: us-west-2
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+
+      - name: Terraform Init
+        run: |
+          terraform init \
+            -backend-config="bucket=${{ needs.bootstrap.outputs.tfstate_bucket }}"
+
+      - name: Terraform Apply
+        run: |
+          terraform apply -auto-approve \
+            -var="tfstate_bucket=${{ needs.bootstrap.outputs.tfstate_bucket }}"
+
+  application:
+    runs-on: ubuntu-latest
+
+    needs:
+      - bootstrap
+      - cluster
+
+    defaults:
+      run:
+        working-directory: application
+
+    steps:
+
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+
+      - name: Configure AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: us-west-2
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+
+      - name: Terraform Init
+        run: |
+          terraform init \
+            -backend-config="bucket=${{ needs.bootstrap.outputs.tfstate_bucket }}"
+
+      - name: Terraform Apply
+        run: |
+          terraform apply -auto-approve \
+            -var="state_bucket=${{ needs.bootstrap.outputs.tfstate_bucket }}"

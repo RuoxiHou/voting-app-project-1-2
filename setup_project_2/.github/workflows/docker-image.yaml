@@ -19,12 +19,13 @@ jobs:
  
       - name: Build Docker images
         run: |
-          docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/voting-app:v1.0.0 ./vote
-          docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/worker-app:v1.0.0 ./worker
-          docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/result-app:v1.0.0 ./result
+          docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/voting-app:latest ./application/vote
+          docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/worker-app:latest ./application/worker
+          docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/result-app:latest ./application/result
  
       - name: Push Docker images
+        if: github.event_name == 'push'
         run: |
-          docker push ${{ secrets.DOCKERHUB_USERNAME }}/voting-app:v1.0.0
-          docker push ${{ secrets.DOCKERHUB_USERNAME }}/worker-app:v1.0.0
-          docker push ${{ secrets.DOCKERHUB_USERNAME }}/result-app:v1.0.0
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/voting-app:latest
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/worker-app:latest
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/result-app:latest
