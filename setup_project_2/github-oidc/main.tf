@@ -60,10 +60,16 @@ resource "aws_iam_role" "github_actions" {
           }
 
           StringLike = {
-            "token.actions.githubusercontent.com:sub" = [
-              for branch in var.allowed_branches :
-              "repo:${var.github_repo}:ref:refs/heads/${branch}"
-            ]
+            "token.actions.githubusercontent.com:sub" = concat(
+              [
+                for branch in var.allowed_branches :
+                "repo:${var.github_repo}:ref:refs/heads/${branch}"
+              ],
+              [
+                for branch in var.allowed_branches :
+                "repo:${split("/", var.github_repo)[0]}@*/${split("/", var.github_repo)[1]}@*:ref:refs/heads/${branch}"
+              ]
+            )
           }
         }
       }
