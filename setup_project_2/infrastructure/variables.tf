@@ -148,7 +148,7 @@ variable "db_multi_az" {
 }
 
 variable "domain_name" {
-  description = "Public DNS domain name, for example example.com"
+  description = "Public DNS domain name"
   type        = string
   default     = ""
 }
