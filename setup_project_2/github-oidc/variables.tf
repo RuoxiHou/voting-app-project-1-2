@@ -19,7 +19,7 @@ variable "allowed_branches" {
 variable "role_name" {
   description = "Name of the IAM role assumed by GitHub Actions"
   type        = string
-  default     = "project2-github-actions-role"
+  default     = "project2-github-actions-role-v2"
 }
 
 variable "create_oidc_provider" {
