@@ -1,6 +1,5 @@
 # One-time bootstrap: run this stack locally (with my own AWS credentials),
-# NOT from GitHub Actions. It creates the trust relationship GitHub Actions
-# needs before it can assume any role in this account.
+# NOT from GitHub Actions. It creates the trust relationship GitHub Actions needs before it can assume any role in this account.
 
 data "aws_caller_identity" "current" {}
 
@@ -46,7 +45,14 @@ resource "aws_iam_role" "github_actions" {
           Federated = local.oidc_provider_arn
         }
 
-        Action = "sts:AssumeRoleWithWebIdentity"
+        # aws-actions/configure-aws-credentials attaches GitHub context values
+        # (repo, workflow, actor, branch, etc.) as role session tags by default.
+        # Without sts:TagSession also allowed, AWS rejects the WHOLE
+        # AssumeRoleWithWebIdentity call with a generic "Not authorized" error.
+        Action = [
+          "sts:AssumeRoleWithWebIdentity",
+          "sts:TagSession"
+        ]
 
         Condition = {
           StringEquals = {
