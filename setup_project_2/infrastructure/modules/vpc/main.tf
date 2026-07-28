@@ -37,16 +37,9 @@ locals {
     }
   }
 
-  private_subnets = merge(
-    local.private_eks_subnets,
-    local.private_rds_subnets
-  )
-
   private_route_mapping = {
     private-a = "public-a"
     private-b = "public-b"
-    private-c = "public-a"
-    private-d = "public-b"
   }
 }
 
@@ -188,10 +181,9 @@ resource "aws_nat_gateway" "vpc" {
 }
 
 # Private Route Tables
-# private-a and private-c use NAT in public-a
-# private-b and private-d use NAT in public-b
+# private-a uses NAT in public-a, private-b uses NAT in public-b
 resource "aws_route_table" "private" {
-  for_each = local.private_subnets
+  for_each = local.private_eks_subnets
 
   vpc_id = aws_vpc.vpc.id
 
@@ -221,4 +213,16 @@ resource "aws_route_table" "private_rds" {
   for_each = local.private_rds_subnets
 
   vpc_id = aws_vpc.vpc.id
+
+  tags = {
+    Name = "${local.name_prefix}-${each.key}-rt"
+  }
+}
+
+# Associate Private RDS Subnets with their isolated (no-internet) Route Tables
+resource "aws_route_table_association" "private_rds" {
+  for_each = aws_subnet.private_rds
+
+  subnet_id      = each.value.id
+  route_table_id = aws_route_table.private_rds[each.key].id
 }

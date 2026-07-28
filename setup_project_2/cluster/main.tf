@@ -30,13 +30,8 @@ module "aws_load_balancer_controller" {
   aws_load_balancer_controller_chart_version = var.aws_load_balancer_controller_chart_version
 
   depends_on = [
-    module.external_secrets,
-    module.gateway_api
+    module.external_secrets
   ]
-} # The controller attempts to detect Gateway CRDs and enables the relevant Gateway controllers when those CRDs are present.
-
-module "gateway_api" {
-  source = "./modules/gateway-api"
 }
 
 module "cluster_autoscaler" {
@@ -52,7 +47,6 @@ module "cluster_autoscaler" {
 
   depends_on = [
     module.metrics_server,
-    module.gateway_api,
     module.aws_load_balancer_controller
   ]
 }
@@ -80,8 +74,7 @@ module "external_dns" {
   external_dns_chart_version = var.external_dns_chart_version
 
   depends_on = [
-    module.aws_load_balancer_controller,
-    module.gateway_api
+    module.aws_load_balancer_controller
   ]
 }
 

@@ -1,0 +1,24 @@
+{{- if .Values.worker.autoscaling.enabled }}
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: worker-scaledobject
+  namespace: {{ .Values.namespace }}
+spec:
+  scaleTargetRef:
+    name: worker
+
+  minReplicaCount: {{ .Values.worker.autoscaling.minReplicas }}
+  maxReplicaCount: {{ .Values.worker.autoscaling.maxReplicas }}
+
+  pollingInterval: 15
+  cooldownPeriod: 60
+
+  triggers:
+    - type: redis
+      metadata:
+        address: "{{ .Values.redis.serviceName }}.{{ .Values.namespace }}.svc.cluster.local:{{ .Values.redis.port }}"
+        listName: {{ .Values.worker.autoscaling.redisListName | quote }}
+        listLength: {{ .Values.worker.autoscaling.redisListLength | quote }}
+        activationListLength: "0"
+{{- end }}

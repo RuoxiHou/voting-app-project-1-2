@@ -11,48 +11,12 @@ permissions:
 
 jobs:
 
-  bootstrap:
-    runs-on: ubuntu-latest
-
-    defaults:
-      run:
-        working-directory: bootstrap
-
-    outputs:
-      tfstate_bucket: ${{ steps.outputs.outputs.tfstate_bucket }}
-
-    steps:
-
-      - uses: actions/checkout@v4
-
-      - uses: hashicorp/setup-terraform@v3
-
-      - name: Configure AWS
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-region: us-west-2
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-
-      - name: Terraform Init
-        run: terraform init
-
-      - name: Terraform Apply
-        run: terraform apply -auto-approve
-
-      - name: Get Outputs
-        id: outputs
-        run: |
-          echo "tfstate_bucket=$(terraform output -raw tfstate_bucket_name)" >> $GITHUB_OUTPUT
-
   infrastructure:
     runs-on: ubuntu-latest
 
-    needs:
-      - bootstrap
-
     defaults:
       run:
-        working-directory: infrastructure
+        working-directory: setup_project_2/infrastructure
 
     steps:
 
@@ -69,7 +33,7 @@ jobs:
       - name: Terraform Init
         run: |
           terraform init \
-            -backend-config="bucket=${{ needs.bootstrap.outputs.tfstate_bucket }}"
+            -backend-config="bucket=${{ secrets.AWS_S3_BUCKET_NAME }}"
 
       - name: Terraform Apply
         run: terraform apply -auto-approve
@@ -78,12 +42,11 @@ jobs:
     runs-on: ubuntu-latest
 
     needs:
-      - bootstrap
       - infrastructure
 
     defaults:
       run:
-        working-directory: cluster
+        working-directory: setup_project_2/cluster
 
     steps:
 
@@ -100,23 +63,22 @@ jobs:
       - name: Terraform Init
         run: |
           terraform init \
-            -backend-config="bucket=${{ needs.bootstrap.outputs.tfstate_bucket }}"
+            -backend-config="bucket=${{ secrets.AWS_S3_BUCKET_NAME }}"
 
       - name: Terraform Apply
         run: |
           terraform apply -auto-approve \
-            -var="tfstate_bucket=${{ needs.bootstrap.outputs.tfstate_bucket }}"
+            -var="tfstate_bucket=${{ secrets.AWS_S3_BUCKET_NAME }}"
 
   application:
     runs-on: ubuntu-latest
 
     needs:
-      - bootstrap
       - cluster
 
     defaults:
       run:
-        working-directory: application
+        working-directory: setup_project_2/application
 
     steps:
 
@@ -133,9 +95,9 @@ jobs:
       - name: Terraform Init
         run: |
           terraform init \
-            -backend-config="bucket=${{ needs.bootstrap.outputs.tfstate_bucket }}"
+            -backend-config="bucket=${{ secrets.AWS_S3_BUCKET_NAME }}"
 
       - name: Terraform Apply
         run: |
           terraform apply -auto-approve \
-            -var="state_bucket=${{ needs.bootstrap.outputs.tfstate_bucket }}"
+            -var="state_bucket=${{ secrets.AWS_S3_BUCKET_NAME }}"

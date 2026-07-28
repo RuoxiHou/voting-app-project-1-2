@@ -23,6 +23,12 @@ resource "helm_release" "voting_app" {
       worker = {
         replicaCount = 2
         image        = "${var.student_name}/worker-app:latest"
+
+        autoscaling = {
+          enabled     = true
+          minReplicas = 2
+          maxReplicas = 10
+        }
       }
 
       result = {
@@ -35,11 +41,6 @@ resource "helm_release" "voting_app" {
         image        = "redis:8-alpine"
         serviceName  = "redis"
         port         = 6379
-      }
-
-      gateway = {
-        name = data.terraform_remote_state.cluster.outputs.gateway_name
-        namespace = data.terraform_remote_state.cluster.outputs.gateway_namespace
       }
 
       hosts = {

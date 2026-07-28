@@ -7,7 +7,9 @@ metadata:
     app: worker
 
 spec:
+  {{- if not .Values.worker.autoscaling.enabled }}
   replicas: {{ .Values.worker.replicaCount }}
+  {{- end }}
 
   selector:
     matchLabels:
