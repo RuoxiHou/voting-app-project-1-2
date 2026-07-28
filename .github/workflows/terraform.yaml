@@ -11,55 +11,6 @@ permissions:
 
 jobs:
 
-  bootstrap:
-    runs-on: ubuntu-latest
-
-    defaults:
-      run:
-        working-directory: setup_project_2/bootstrap
-
-    outputs:
-      tfstate_bucket: ${{ steps.outputs.outputs.tfstate_bucket }}
-
-    steps:
-
-      - uses: actions/checkout@v4
-
-      - uses: hashicorp/setup-terraform@v3
-
-      - name: Resolve AWS role ARN
-        id: role_arn
-        run: |
-          ARN="$(printf '%s' "$RAW_ARN" | xargs)"
-          if [ -z "$ARN" ]; then
-            echo "::error::AWS_ROLE_ARN secret is empty or not visible to this job. Check it's a REPOSITORY secret on RuoxiHou/voting-app-project-1-2 (not the upstream fork), and not scoped to a GitHub Environment unless this job declares that environment."
-            exit 1
-          fi
-          ACCOUNT_ID=$(printf '%s' "$ARN" | sed -n 's#^arn:aws:iam::\([0-9]\{12\}\):role/.*#\1#p')
-          ROLE_NAME=$(printf '%s' "$ARN" | sed -n 's#^arn:aws:iam::[0-9]\{12\}:role/\(.*\)#\1#p')
-          echo "AWS_ROLE_ARN resolved (length: ${#ARN} chars) -> account: ${ACCOUNT_ID:-<could not parse account id>}, role name: ${ROLE_NAME:-<could not parse role name>}"
-          echo "Expected: account 686699774218, role name project2-github-actions-role"
-          echo "value=$ARN" >> "$GITHUB_OUTPUT"
-        env:
-          RAW_ARN: ${{ secrets.AWS_ROLE_ARN }}
-
-      - name: Configure AWS
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-region: us-west-2
-          role-to-assume: ${{ steps.role_arn.outputs.value }}
-
-      - name: Terraform Init
-        run: terraform init
-
-      - name: Terraform Apply
-        run: terraform apply -auto-approve
-
-      - name: Get Outputs
-        id: outputs
-        run: |
-          echo "tfstate_bucket=$(terraform output -raw tfstate_bucket_name)" >> $GITHUB_OUTPUT
-
   infrastructure:
     runs-on: ubuntu-latest
 
@@ -76,32 +27,16 @@ jobs:
 
       - uses: hashicorp/setup-terraform@v3
 
-      - name: Resolve AWS role ARN
-        id: role_arn
-        run: |
-          ARN="$(printf '%s' "$RAW_ARN" | xargs)"
-          if [ -z "$ARN" ]; then
-            echo "::error::AWS_ROLE_ARN secret is empty or not visible to this job. Check it's a REPOSITORY secret on RuoxiHou/voting-app-project-1-2 (not the upstream fork), and not scoped to a GitHub Environment unless this job declares that environment."
-            exit 1
-          fi
-          ACCOUNT_ID=$(printf '%s' "$ARN" | sed -n 's#^arn:aws:iam::\([0-9]\{12\}\):role/.*#\1#p')
-          ROLE_NAME=$(printf '%s' "$ARN" | sed -n 's#^arn:aws:iam::[0-9]\{12\}:role/\(.*\)#\1#p')
-          echo "AWS_ROLE_ARN resolved (length: ${#ARN} chars) -> account: ${ACCOUNT_ID:-<could not parse account id>}, role name: ${ROLE_NAME:-<could not parse role name>}"
-          echo "Expected: account 686699774218, role name project2-github-actions-role"
-          echo "value=$ARN" >> "$GITHUB_OUTPUT"
-        env:
-          RAW_ARN: ${{ secrets.AWS_ROLE_ARN }}
-
       - name: Configure AWS
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-region: us-west-2
-          role-to-assume: ${{ steps.role_arn.outputs.value }}
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
 
       - name: Terraform Init
         run: |
           terraform init \
-            -backend-config="bucket=${{ needs.bootstrap.outputs.tfstate_bucket }}"
+            -backend-config="bucket=${{ secrets.AWS_S3_BUCKET_NAME }}"
 
       - name: Terraform Apply
         run: terraform apply -auto-approve
@@ -123,37 +58,21 @@ jobs:
 
       - uses: hashicorp/setup-terraform@v3
 
-      - name: Resolve AWS role ARN
-        id: role_arn
-        run: |
-          ARN="$(printf '%s' "$RAW_ARN" | xargs)"
-          if [ -z "$ARN" ]; then
-            echo "::error::AWS_ROLE_ARN secret is empty or not visible to this job. Check it's a REPOSITORY secret on RuoxiHou/voting-app-project-1-2 (not the upstream fork), and not scoped to a GitHub Environment unless this job declares that environment."
-            exit 1
-          fi
-          ACCOUNT_ID=$(printf '%s' "$ARN" | sed -n 's#^arn:aws:iam::\([0-9]\{12\}\):role/.*#\1#p')
-          ROLE_NAME=$(printf '%s' "$ARN" | sed -n 's#^arn:aws:iam::[0-9]\{12\}:role/\(.*\)#\1#p')
-          echo "AWS_ROLE_ARN resolved (length: ${#ARN} chars) -> account: ${ACCOUNT_ID:-<could not parse account id>}, role name: ${ROLE_NAME:-<could not parse role name>}"
-          echo "Expected: account 686699774218, role name project2-github-actions-role"
-          echo "value=$ARN" >> "$GITHUB_OUTPUT"
-        env:
-          RAW_ARN: ${{ secrets.AWS_ROLE_ARN }}
-
       - name: Configure AWS
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-region: us-west-2
-          role-to-assume: ${{ steps.role_arn.outputs.value }}
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
 
       - name: Terraform Init
         run: |
           terraform init \
-            -backend-config="bucket=${{ needs.bootstrap.outputs.tfstate_bucket }}"
+            -backend-config="bucket=${{ secrets.AWS_S3_BUCKET_NAME }}"
 
       - name: Terraform Apply
         run: |
           terraform apply -auto-approve \
-            -var="tfstate_bucket=${{ needs.bootstrap.outputs.tfstate_bucket }}"
+            -var="tfstate_bucket=${{ secrets.AWS_S3_BUCKET_NAME }}"
 
   application:
     runs-on: ubuntu-latest
@@ -172,32 +91,16 @@ jobs:
 
       - uses: hashicorp/setup-terraform@v3
 
-      - name: Resolve AWS role ARN
-        id: role_arn
-        run: |
-          ARN="$(printf '%s' "$RAW_ARN" | xargs)"
-          if [ -z "$ARN" ]; then
-            echo "::error::AWS_ROLE_ARN secret is empty or not visible to this job. Check it's a REPOSITORY secret on RuoxiHou/voting-app-project-1-2 (not the upstream fork), and not scoped to a GitHub Environment unless this job declares that environment."
-            exit 1
-          fi
-          ACCOUNT_ID=$(printf '%s' "$ARN" | sed -n 's#^arn:aws:iam::\([0-9]\{12\}\):role/.*#\1#p')
-          ROLE_NAME=$(printf '%s' "$ARN" | sed -n 's#^arn:aws:iam::[0-9]\{12\}:role/\(.*\)#\1#p')
-          echo "AWS_ROLE_ARN resolved (length: ${#ARN} chars) -> account: ${ACCOUNT_ID:-<could not parse account id>}, role name: ${ROLE_NAME:-<could not parse role name>}"
-          echo "Expected: account 686699774218, role name project2-github-actions-role"
-          echo "value=$ARN" >> "$GITHUB_OUTPUT"
-        env:
-          RAW_ARN: ${{ secrets.AWS_ROLE_ARN }}
-
       - name: Configure AWS
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-region: us-west-2
-          role-to-assume: ${{ steps.role_arn.outputs.value }}
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
 
       - name: Terraform Init
         run: |
           terraform init \
-            -backend-config="bucket=${{ needs.bootstrap.outputs.tfstate_bucket }}"
+            -backend-config="bucket=${{ secrets.AWS_S3_BUCKET_NAME }}"
 
       - name: Terraform Apply
         run: |
