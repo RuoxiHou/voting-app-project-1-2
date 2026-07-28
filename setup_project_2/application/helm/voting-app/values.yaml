@@ -38,8 +38,7 @@ redis:
 
 database:
   secretName: "voting-db"
-  # Always supplied by Terraform (application/main.tf) from the
-  # infrastructure module's db_secret_name output.
+  # Always supplied by Terraform (application/main.tf) from the infrastructure module's db_secret_name output.
   awsSecretName: ""
 
 hosts:

@@ -2,7 +2,7 @@ name: Terraform Infrastructure Pipeline
 
 on:
   push:
-    branches: [ "main", "advanced" ]
+    branches: [ "main"]
   workflow_dispatch: {}
 
 permissions:

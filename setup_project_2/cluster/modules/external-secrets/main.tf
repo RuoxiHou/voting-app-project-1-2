@@ -25,7 +25,6 @@ resource "helm_release" "external_secrets" {
 }
 
 # This installs External Secrets Operator, which runs inside Kubernetes and syncs secrets from AWS Secrets Manager into Kubernetes Secret objects. 
-# The official docs say it runs as a deployment in the cluster and manages Kubernetes secrets from external providers through these custom resources.
 
 resource "kubernetes_manifest" "aws_secretsmanager_store" {
   manifest = {
