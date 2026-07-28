@@ -3,7 +3,12 @@ name: Terraform Infrastructure Pipeline
 on:
   push:
     branches: [ "main"]
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      infrastructure_lock_id:
+        description: "Stale infrastructure state lock ID to force-unlock"
+        required: false
+        type: string
 
 concurrency:
   group: terraform-${{ github.workflow }}-${{ github.ref_name }}
@@ -38,6 +43,10 @@ jobs:
         run: |
           terraform init \
             -backend-config="bucket=${{ secrets.AWS_S3_BUCKET_NAME }}"
+
+      - name: Force-unlock stale infrastructure state
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.infrastructure_lock_id != '' }}
+        run: terraform force-unlock -force "${{ inputs.infrastructure_lock_id }}"
 
       - name: Terraform Apply
         run: terraform apply -auto-approve -lock-timeout=10m
