@@ -27,11 +27,24 @@ jobs:
 
       - uses: hashicorp/setup-terraform@v3
 
+      - name: Resolve AWS role ARN
+        id: role_arn
+        run: |
+          ARN="$(printf '%s' "$RAW_ARN" | xargs)"
+          if [ -z "$ARN" ]; then
+            echo "::error::AWS_ROLE_ARN secret is empty or not visible to this job. Check it's a REPOSITORY secret on RuoxiHou/voting-app-project-1-2 (not the upstream fork), and not scoped to a GitHub Environment unless this job declares that environment."
+            exit 1
+          fi
+          echo "AWS_ROLE_ARN resolved (length: ${#ARN} chars)"
+          echo "value=$ARN" >> "$GITHUB_OUTPUT"
+        env:
+          RAW_ARN: ${{ secrets.AWS_ROLE_ARN }}
+
       - name: Configure AWS
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-region: us-west-2
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          role-to-assume: ${{ steps.role_arn.outputs.value }}
 
       - name: Terraform Init
         run: terraform init
@@ -60,11 +73,24 @@ jobs:
 
       - uses: hashicorp/setup-terraform@v3
 
+      - name: Resolve AWS role ARN
+        id: role_arn
+        run: |
+          ARN="$(printf '%s' "$RAW_ARN" | xargs)"
+          if [ -z "$ARN" ]; then
+            echo "::error::AWS_ROLE_ARN secret is empty or not visible to this job. Check it's a REPOSITORY secret on RuoxiHou/voting-app-project-1-2 (not the upstream fork), and not scoped to a GitHub Environment unless this job declares that environment."
+            exit 1
+          fi
+          echo "AWS_ROLE_ARN resolved (length: ${#ARN} chars)"
+          echo "value=$ARN" >> "$GITHUB_OUTPUT"
+        env:
+          RAW_ARN: ${{ secrets.AWS_ROLE_ARN }}
+
       - name: Configure AWS
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-region: us-west-2
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          role-to-assume: ${{ steps.role_arn.outputs.value }}
 
       - name: Terraform Init
         run: |
@@ -91,11 +117,24 @@ jobs:
 
       - uses: hashicorp/setup-terraform@v3
 
+      - name: Resolve AWS role ARN
+        id: role_arn
+        run: |
+          ARN="$(printf '%s' "$RAW_ARN" | xargs)"
+          if [ -z "$ARN" ]; then
+            echo "::error::AWS_ROLE_ARN secret is empty or not visible to this job. Check it's a REPOSITORY secret on RuoxiHou/voting-app-project-1-2 (not the upstream fork), and not scoped to a GitHub Environment unless this job declares that environment."
+            exit 1
+          fi
+          echo "AWS_ROLE_ARN resolved (length: ${#ARN} chars)"
+          echo "value=$ARN" >> "$GITHUB_OUTPUT"
+        env:
+          RAW_ARN: ${{ secrets.AWS_ROLE_ARN }}
+
       - name: Configure AWS
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-region: us-west-2
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          role-to-assume: ${{ steps.role_arn.outputs.value }}
 
       - name: Terraform Init
         run: |
@@ -124,11 +163,24 @@ jobs:
 
       - uses: hashicorp/setup-terraform@v3
 
+      - name: Resolve AWS role ARN
+        id: role_arn
+        run: |
+          ARN="$(printf '%s' "$RAW_ARN" | xargs)"
+          if [ -z "$ARN" ]; then
+            echo "::error::AWS_ROLE_ARN secret is empty or not visible to this job. Check it's a REPOSITORY secret on RuoxiHou/voting-app-project-1-2 (not the upstream fork), and not scoped to a GitHub Environment unless this job declares that environment."
+            exit 1
+          fi
+          echo "AWS_ROLE_ARN resolved (length: ${#ARN} chars)"
+          echo "value=$ARN" >> "$GITHUB_OUTPUT"
+        env:
+          RAW_ARN: ${{ secrets.AWS_ROLE_ARN }}
+
       - name: Configure AWS
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-region: us-west-2
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          role-to-assume: ${{ steps.role_arn.outputs.value }}
 
       - name: Terraform Init
         run: |
