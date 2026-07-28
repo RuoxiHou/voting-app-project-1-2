@@ -1,7 +1,3 @@
-output "gateway_class_name" {
-  value = module.gateway_api.gateway_class_name
-}
-
 output "metrics_server_release" {
   value = module.metrics_server.release_name
 }
@@ -20,14 +16,4 @@ output "cluster_autoscaler_release" {
 
 output "keda_release" {
   value = module.keda.release_name
-}
-
-output "gateway_name" {
-  # NOTE: sourced directly from the variable since the "gateway" module is
-  # currently disabled (see main.tf) - not from a module output.
-  value = var.gateway_name
-}
-
-output "gateway_namespace" {
-  value = var.gateway_namespace
 }

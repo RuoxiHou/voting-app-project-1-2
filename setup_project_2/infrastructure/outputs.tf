@@ -36,10 +36,6 @@ output "oidc_provider_url" {
   value = module.eks.oidc_provider_url
 }
 
-output "node_security_group_id" {
-  value = module.eks.node_security_group_id
-}
-
 output "cluster_certificate_authority_data" {
   value = module.eks.cluster_certificate_authority_data
 }

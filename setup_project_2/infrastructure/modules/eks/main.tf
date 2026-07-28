@@ -165,9 +165,3 @@ resource "aws_iam_openid_connect_provider" "cluster" {
     Name = "${local.name_prefix}-eks-oidc"
   }
 }
-
-# Create EKS node security group 
-resource "aws_security_group" "nodes" {
-  name   = "${local.name_prefix}-eks-nodes"
-  vpc_id = var.vpc_id
-}

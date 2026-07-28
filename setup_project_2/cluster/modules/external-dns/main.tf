@@ -61,10 +61,6 @@ resource "helm_release" "external_dns" {
     {
         name  = "sources[1]"
         value = "ingress"
-    },
-    {
-        name  = "sources[2]"
-        value = "gateway-httproute"
     }
   ]
 

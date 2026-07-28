@@ -17,6 +17,13 @@ vote:
 worker:
   replicaCount: 2
   image: ${student_name}/worker-app:latest
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+    # Scale up when the "votes" Redis list grows past this many pending entries per replica.
+    redisListName: votes
+    redisListLength: "5"
 
 result:
   replicaCount: 2
@@ -34,10 +41,6 @@ database:
   # Always supplied by Terraform (application/main.tf) from the
   # infrastructure module's db_secret_name output.
   awsSecretName: ""
-
-gateway:
-  name: ""
-  namespace: ""
 
 hosts:
   vote: ""

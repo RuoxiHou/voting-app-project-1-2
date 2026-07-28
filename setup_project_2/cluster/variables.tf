@@ -21,12 +21,6 @@ variable "keda_chart_version" {
   default     = "2.20.1"
 }
 
-variable "gateway_api_version" {
-  description = "Gateway API CRD version"
-  type        = string
-  default     = "v1.6.1"
-}
-
 variable "aws_load_balancer_controller_chart_version" {
   description = "AWS Load Balancer Controller Helm chart version"
   type        = string
@@ -49,19 +43,4 @@ variable "metrics_server_chart_version" {
   type        = string
   description = "Helm chart version for Metrics Server"
   default     = "3.13.0"
-}
-
-variable "gateway_name" {
-  type    = string
-  default = "public-gateway"
-}
-
-variable "gateway_namespace" {
-  type    = string
-  default = "voting-app"
-}
-
-variable "gateway_class_name" {
-  type    = string
-  default = "alb"
 }
