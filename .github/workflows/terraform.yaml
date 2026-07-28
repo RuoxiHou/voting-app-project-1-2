@@ -35,7 +35,10 @@ jobs:
             echo "::error::AWS_ROLE_ARN secret is empty or not visible to this job. Check it's a REPOSITORY secret on RuoxiHou/voting-app-project-1-2 (not the upstream fork), and not scoped to a GitHub Environment unless this job declares that environment."
             exit 1
           fi
-          echo "AWS_ROLE_ARN resolved (length: ${#ARN} chars)"
+          ACCOUNT_ID=$(printf '%s' "$ARN" | sed -n 's#^arn:aws:iam::\([0-9]\{12\}\):role/.*#\1#p')
+          ROLE_NAME=$(printf '%s' "$ARN" | sed -n 's#^arn:aws:iam::[0-9]\{12\}:role/\(.*\)#\1#p')
+          echo "AWS_ROLE_ARN resolved (length: ${#ARN} chars) -> account: ${ACCOUNT_ID:-<could not parse account id>}, role name: ${ROLE_NAME:-<could not parse role name>}"
+          echo "Expected: account 686699774218, role name project2-github-actions-role"
           echo "value=$ARN" >> "$GITHUB_OUTPUT"
         env:
           RAW_ARN: ${{ secrets.AWS_ROLE_ARN }}
@@ -81,7 +84,10 @@ jobs:
             echo "::error::AWS_ROLE_ARN secret is empty or not visible to this job. Check it's a REPOSITORY secret on RuoxiHou/voting-app-project-1-2 (not the upstream fork), and not scoped to a GitHub Environment unless this job declares that environment."
             exit 1
           fi
-          echo "AWS_ROLE_ARN resolved (length: ${#ARN} chars)"
+          ACCOUNT_ID=$(printf '%s' "$ARN" | sed -n 's#^arn:aws:iam::\([0-9]\{12\}\):role/.*#\1#p')
+          ROLE_NAME=$(printf '%s' "$ARN" | sed -n 's#^arn:aws:iam::[0-9]\{12\}:role/\(.*\)#\1#p')
+          echo "AWS_ROLE_ARN resolved (length: ${#ARN} chars) -> account: ${ACCOUNT_ID:-<could not parse account id>}, role name: ${ROLE_NAME:-<could not parse role name>}"
+          echo "Expected: account 686699774218, role name project2-github-actions-role"
           echo "value=$ARN" >> "$GITHUB_OUTPUT"
         env:
           RAW_ARN: ${{ secrets.AWS_ROLE_ARN }}
@@ -125,7 +131,10 @@ jobs:
             echo "::error::AWS_ROLE_ARN secret is empty or not visible to this job. Check it's a REPOSITORY secret on RuoxiHou/voting-app-project-1-2 (not the upstream fork), and not scoped to a GitHub Environment unless this job declares that environment."
             exit 1
           fi
-          echo "AWS_ROLE_ARN resolved (length: ${#ARN} chars)"
+          ACCOUNT_ID=$(printf '%s' "$ARN" | sed -n 's#^arn:aws:iam::\([0-9]\{12\}\):role/.*#\1#p')
+          ROLE_NAME=$(printf '%s' "$ARN" | sed -n 's#^arn:aws:iam::[0-9]\{12\}:role/\(.*\)#\1#p')
+          echo "AWS_ROLE_ARN resolved (length: ${#ARN} chars) -> account: ${ACCOUNT_ID:-<could not parse account id>}, role name: ${ROLE_NAME:-<could not parse role name>}"
+          echo "Expected: account 686699774218, role name project2-github-actions-role"
           echo "value=$ARN" >> "$GITHUB_OUTPUT"
         env:
           RAW_ARN: ${{ secrets.AWS_ROLE_ARN }}
@@ -171,7 +180,10 @@ jobs:
             echo "::error::AWS_ROLE_ARN secret is empty or not visible to this job. Check it's a REPOSITORY secret on RuoxiHou/voting-app-project-1-2 (not the upstream fork), and not scoped to a GitHub Environment unless this job declares that environment."
             exit 1
           fi
-          echo "AWS_ROLE_ARN resolved (length: ${#ARN} chars)"
+          ACCOUNT_ID=$(printf '%s' "$ARN" | sed -n 's#^arn:aws:iam::\([0-9]\{12\}\):role/.*#\1#p')
+          ROLE_NAME=$(printf '%s' "$ARN" | sed -n 's#^arn:aws:iam::[0-9]\{12\}:role/\(.*\)#\1#p')
+          echo "AWS_ROLE_ARN resolved (length: ${#ARN} chars) -> account: ${ACCOUNT_ID:-<could not parse account id>}, role name: ${ROLE_NAME:-<could not parse role name>}"
+          echo "Expected: account 686699774218, role name project2-github-actions-role"
           echo "value=$ARN" >> "$GITHUB_OUTPUT"
         env:
           RAW_ARN: ${{ secrets.AWS_ROLE_ARN }}
