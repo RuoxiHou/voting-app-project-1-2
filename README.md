@@ -1,4 +1,4 @@
-# Voting App – Advanced DevOps Project
+# Voting App –DevOps Project
 
 Setup_project_2 has the cloud infrastructure with EKS
 
