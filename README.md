@@ -214,7 +214,8 @@ flowchart LR
    IRSA, using the EKS OIDC provider and service-account-scoped trust.
 
 ### Required GitHub Secrets
-
+On top of all the variables inside of .tfvars (which do not exist in the repo and is intended practice), you also need the following ones.
+On the other hand, this missing .tfvars also means the pipeline for application deployment will not finish and only be waiting to get the variables.
 | Secret               | Purpose                                      |
 | --------------------- | --------------------------------------------- |
 | `AWS_ROLE_ARN`       | IAM role assumed via OIDC for all Terraform jobs. |
