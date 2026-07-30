@@ -24,6 +24,11 @@ Application autoscaling is handled by **KEDA**, which scales the `worker`
 Deployment based on the length of the `votes` list in Redis, instead of a
 static replica count.
 
+Disclaimer for the current project:
+cert-manager: installed and ready, but effectively idle for certificate issuance.
+DNS01 challenge flow: not active in current manifests.
+TLS currently comes from an existing ACM certificate attached to ALB, not cert-manager-issued certs.
+
 ## Pipeline Process
 
 Three GitHub Actions workflows automate the project, all triggered on
